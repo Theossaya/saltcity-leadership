@@ -58,7 +58,8 @@ create table public.companies (
   assistant_leader_id uuid references public.profiles(id) on delete set null,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, church_id)
 );
 
 create table public.company_members (
@@ -70,7 +71,11 @@ create table public.company_members (
   email text,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, church_id, company_id),
+  foreign key (company_id, church_id)
+    references public.companies(id, church_id)
+    on delete cascade
 );
 
 create table public.units (
@@ -80,7 +85,8 @@ create table public.units (
   leader_id uuid references public.profiles(id) on delete set null,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, church_id)
 );
 
 create table public.unit_members (
@@ -92,7 +98,10 @@ create table public.unit_members (
   role_label text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (profile_id is not null or full_name is not null)
+  check (profile_id is not null or full_name is not null),
+  foreign key (unit_id, church_id)
+    references public.units(id, church_id)
+    on delete cascade
 );
 
 create table public.weekly_reports (
@@ -118,7 +127,12 @@ create table public.weekly_reports (
   reviewer_notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  unique (id, church_id),
+  unique (id, church_id, company_id),
   unique (company_id, report_week_start),
+  foreign key (company_id, church_id)
+    references public.companies(id, church_id)
+    on delete cascade,
   check (report_week_end >= report_week_start)
 );
 
@@ -145,7 +159,16 @@ create table public.absentee_records (
   streak_count integer not null default 1 check (streak_count >= 1),
   follow_up_required boolean not null default false,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, church_id),
+  unique (id, church_id, company_id, company_member_id),
+  unique (weekly_report_id, company_member_id),
+  foreign key (weekly_report_id, church_id, company_id)
+    references public.weekly_reports(id, church_id, company_id)
+    on delete cascade,
+  foreign key (company_member_id, church_id, company_id)
+    references public.company_members(id, church_id, company_id)
+    on delete cascade
 );
 
 create table public.follow_up_cases (
@@ -164,7 +187,17 @@ create table public.follow_up_cases (
   date_contacted date,
   resolved_at timestamptz,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, church_id),
+  foreign key (company_id, church_id)
+    references public.companies(id, church_id)
+    on delete cascade,
+  foreign key (company_member_id, church_id, company_id)
+    references public.company_members(id, church_id, company_id)
+    on delete cascade,
+  foreign key (absentee_record_id, church_id, company_id, company_member_id)
+    references public.absentee_records(id, church_id, company_id, company_member_id)
+    on delete set null (absentee_record_id)
 );
 
 create table public.tasks (
@@ -177,10 +210,13 @@ create table public.tasks (
   due_date date,
   priority text not null default 'normal' check (priority in ('low', 'normal', 'high', 'urgent')),
   status text not null default 'todo' check (status in ('todo', 'in_progress', 'blocked', 'done')),
+  follow_up_case_id uuid references public.follow_up_cases(id) on delete set null,
   linked_entity_type text,
   linked_entity_id uuid,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  foreign key (follow_up_case_id, church_id)
+    references public.follow_up_cases(id, church_id)
 );
 
 create table public.announcements (
@@ -207,7 +243,25 @@ create table public.announcements (
   expires_at timestamptz,
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  check (
+    (audience_type = 'all_leaders'
+      and audience_company_id is null
+      and audience_unit_id is null
+      and audience_role is null)
+    or (audience_type = 'company'
+      and audience_company_id is not null
+      and audience_unit_id is null
+      and audience_role is null)
+    or (audience_type = 'unit'
+      and audience_company_id is null
+      and audience_unit_id is not null
+      and audience_role is null)
+    or (audience_type = 'role'
+      and audience_company_id is null
+      and audience_unit_id is null
+      and audience_role is not null)
+  )
 );
 
 create table public.announcement_reads (
@@ -271,7 +325,25 @@ create table public.documents (
   ),
   uploaded_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  check (
+    (visibility in ('all_leaders', 'admin_only')
+      and company_id is null
+      and unit_id is null
+      and role is null)
+    or (visibility = 'company'
+      and company_id is not null
+      and unit_id is null
+      and role is null)
+    or (visibility = 'unit'
+      and company_id is null
+      and unit_id is not null
+      and role is null)
+    or (visibility = 'role'
+      and company_id is null
+      and unit_id is null
+      and role is not null)
+  )
 );
 
 create trigger set_profiles_updated_at
@@ -380,6 +452,7 @@ create index idx_tasks_created_by on public.tasks(created_by);
 create index idx_tasks_status on public.tasks(status);
 create index idx_tasks_due_date on public.tasks(due_date);
 create index idx_tasks_created_at on public.tasks(created_at desc);
+create index idx_tasks_follow_up_case_id on public.tasks(follow_up_case_id);
 create index idx_tasks_linked_entity on public.tasks(linked_entity_type, linked_entity_id);
 
 create index idx_announcements_church_id on public.announcements(church_id);

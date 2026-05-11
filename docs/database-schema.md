@@ -50,18 +50,25 @@ The role values are:
 - the weekly report
 - the company member
 
+The schema prevents duplicate absentee rows for the same `weekly_report_id` and `company_member_id`. This keeps the Monday follow-up list from being inflated by repeated entries for the same person in the same report.
+
+The core report and absentee relationships use same-church and same-company composite foreign keys where practical. In particular, absentee records must point to a weekly report and company member that belong to the same church and company as the absentee row. This is intentionally handled at the database level because the report -> absentee -> follow-up flow is the MVP backbone.
+
 `follow_up_cases` are created from absentee records or other report outcomes. A follow-up case links to the relevant company and company member, and can optionally link back to the absentee record that created it. Admins can assign a case to a leader for contact and resolution.
+
+Follow-up cases should be created through trusted server code, such as a Server Action or RPC, after report submission and absentee validation. Normal client writes should not manage the full workflow directly because the app needs to validate cross-table relationships and create follow-up work atomically.
 
 ## Tasks
 
 `tasks` stores actionable assignments. Tasks can stand alone or link to another record with:
 
+- `follow_up_case_id`
 - `linked_entity_type`
 - `linked_entity_id`
 
-This supports simple links to follow-up cases, events, reports, companies, or future operational records without over-engineering a separate table for every relationship during the MVP.
+`follow_up_case_id` is a direct nullable foreign key for the core MVP follow-up task workflow. The generic `linked_entity_type` and `linked_entity_id` fields remain available for secondary links to events, reports, companies, or future operational records, but follow-up assignments should use the direct foreign key when they come from a follow-up case.
 
-Assigned users can see and update their own tasks. Admins can manage church-wide tasks.
+Assigned users can see their own tasks. Admins can manage church-wide tasks. Task completion and similar assigned-user changes should go through trusted Server Actions or RPCs, such as `complete_task`, so assigned users cannot change ownership, church linkage, priority, or linked records.
 
 ## Announcements
 
@@ -76,6 +83,8 @@ Announcements can target:
 
 `announcement_reads` stores one read receipt per announcement and user. This lets admins see who has read an announcement while keeping the announcement body simple.
 
+Announcement audience rows include simple consistency checks. Company announcements require a company target, unit announcements require a unit target, role announcements require a role target, and all-leader announcements do not carry extra target fields.
+
 ## Events and Documents
 
 `events` stores leadership events such as review meetings or preparation sessions.
@@ -83,6 +92,8 @@ Announcements can target:
 `event_checklist_items` stores simple event tasks that can be assigned and completed.
 
 `documents` stores metadata for leadership resources. It stores a `file_path`, not the file itself. File storage and bucket policy details are intentionally left for a later Supabase storage pass.
+
+Document visibility follows the same leadership-only principle as announcements. Even documents marked `all_leaders` require an active leadership membership in the same church; unauthenticated users and unrelated users should not be able to read them. Document visibility rows also include consistency checks so company, unit, and role visibility require the matching target field.
 
 ## RLS Draft
 
@@ -94,11 +105,11 @@ The first-pass intent is:
 - users can read churches where they have active membership
 - `super_admin` and `church_admin` can manage church-wide operational data
 - `company_leader` and `assistant_leader` can access assigned company data and submit reports
-- assigned users can read and update their own tasks
+- assigned users can read their own tasks and follow-up assignments
 - follow-up data is restricted to admins, assigned users, and related company leaders
 - announcements and documents are readable based on audience or visibility
 
-Some column-level restrictions should be tightened later with Server Actions or dedicated RPCs once the app flows are implemented.
+Sensitive workflow updates should use Server Actions or dedicated RPCs rather than broad client-side updates. This applies especially to report submission/review, follow-up contact updates, task completion, and event checklist completion. RLS protects row visibility, but these flows need column-level and cross-table validation that is safer in trusted server code.
 
 ## Intentionally Left Out
 

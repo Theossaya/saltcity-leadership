@@ -30,6 +30,11 @@ set search_path = public
 as $$
   select c.id
   from public.companies c
+  join public.church_memberships cm
+    on cm.church_id = c.church_id
+   and cm.user_id = auth.uid()
+   and cm.status = 'active'
+   and cm.role in ('company_leader', 'assistant_leader')
   where c.church_id = target_church_id
     and (c.leader_id = auth.uid() or c.assistant_leader_id = auth.uid());
 $$;
@@ -44,6 +49,11 @@ as $$
   select exists (
     select 1
     from public.companies c
+    join public.church_memberships cm
+      on cm.church_id = c.church_id
+     and cm.user_id = auth.uid()
+     and cm.status = 'active'
+     and cm.role in ('company_leader', 'assistant_leader')
     where c.id = target_company_id
       and (c.leader_id = auth.uid() or c.assistant_leader_id = auth.uid())
   );
@@ -59,6 +69,11 @@ as $$
   select exists (
     select 1
     from public.units u
+    join public.church_memberships cm
+      on cm.church_id = u.church_id
+     and cm.user_id = auth.uid()
+     and cm.status = 'active'
+     and cm.role = 'unit_leader'
     where u.id = target_unit_id
       and u.leader_id = auth.uid()
   );
@@ -258,22 +273,39 @@ create policy "weekly_reports_company_leaders_insert"
 on public.weekly_reports for insert
 with check (
   public.current_user_has_role(church_id, array['super_admin', 'church_admin'])
-  or company_id in (select * from public.current_user_company_ids(church_id))
-);
-
-create policy "weekly_reports_company_leaders_update_drafts"
-on public.weekly_reports for update
-using (
-  public.current_user_has_role(church_id, array['super_admin', 'church_admin'])
   or (
     company_id in (select * from public.current_user_company_ids(church_id))
-    and status in ('not_started', 'draft', 'flagged')
+    and status in ('not_started', 'draft', 'submitted')
+    and (submitted_by is null or submitted_by = auth.uid())
+    and reviewed_by is null
+    and reviewed_at is null
+    and reviewer_notes is null
   )
+);
+
+create policy "weekly_reports_admin_update"
+on public.weekly_reports for update
+using (public.current_user_has_role(church_id, array['super_admin', 'church_admin']))
+with check (public.current_user_has_role(church_id, array['super_admin', 'church_admin']));
+
+create policy "weekly_reports_company_leaders_update_draft_flow"
+on public.weekly_reports for update
+using (
+  company_id in (select * from public.current_user_company_ids(church_id))
+  and status in ('not_started', 'draft')
 )
 with check (
-  public.current_user_has_role(church_id, array['super_admin', 'church_admin'])
-  or company_id in (select * from public.current_user_company_ids(church_id))
+  company_id in (select * from public.current_user_company_ids(church_id))
+  and status in ('not_started', 'draft', 'submitted')
+  and (submitted_by is null or submitted_by = auth.uid())
+  and reviewed_by is null
+  and reviewed_at is null
+  and reviewer_notes is null
 );
+
+-- TODO: implement a submit_report RPC/server action before app feature work.
+-- It should atomically submit the report, lock review-only fields away from
+-- company leaders, validate absentee rows, and create follow-up cases as needed.
 
 create policy "absentee_records_select_admin_or_company_leader"
 on public.absentee_records for select
@@ -313,13 +345,9 @@ on public.follow_up_cases for all
 using (public.current_user_has_role(church_id, array['super_admin', 'church_admin']))
 with check (public.current_user_has_role(church_id, array['super_admin', 'church_admin']));
 
-create policy "follow_up_cases_assigned_update_limited"
-on public.follow_up_cases for update
-using (assigned_to = auth.uid())
-with check (assigned_to = auth.uid());
-
--- TODO: tighten column-level update permissions for assigned follow-up users in application code
--- or with dedicated RPCs so they can update notes/contact status without reassigning cases.
+-- TODO: implement update_follow_up_contact_status as a trusted RPC/server action.
+-- Assigned users should update contact status, notes, and resolution fields only,
+-- without changing church_id, ownership, priority, company links, or assignments.
 
 create policy "tasks_select_admin_or_assigned_or_creator"
 on public.tasks for select
@@ -334,10 +362,9 @@ on public.tasks for all
 using (public.current_user_has_role(church_id, array['super_admin', 'church_admin']))
 with check (public.current_user_has_role(church_id, array['super_admin', 'church_admin']));
 
-create policy "tasks_assigned_update"
-on public.tasks for update
-using (assigned_to = auth.uid())
-with check (assigned_to = auth.uid());
+-- TODO: implement complete_task as a trusted RPC/server action.
+-- Assigned users should complete or progress their own tasks only, without
+-- changing church_id, assigned_to, priority, linked entities, or follow_up_case_id.
 
 create policy "announcements_select_targeted"
 on public.announcements for select
@@ -400,16 +427,27 @@ on public.event_checklist_items for all
 using (public.current_user_has_role(church_id, array['super_admin', 'church_admin']))
 with check (public.current_user_has_role(church_id, array['super_admin', 'church_admin']));
 
-create policy "event_checklist_items_assigned_update"
-on public.event_checklist_items for update
-using (assigned_to = auth.uid())
-with check (assigned_to = auth.uid());
+-- TODO: implement complete_event_checklist_item as a trusted RPC/server action.
+-- Assigned users should only mark their own checklist items complete/incomplete.
 
 create policy "documents_select_visible"
 on public.documents for select
 using (
   public.current_user_has_role(church_id, array['super_admin', 'church_admin'])
-  or visibility = 'all_leaders'
+  or (
+    visibility = 'all_leaders'
+    and public.current_user_has_role(
+      church_id,
+      array[
+        'company_leader',
+        'assistant_leader',
+        'unit_leader',
+        'general_leader',
+        'church_admin',
+        'super_admin'
+      ]
+    )
+  )
   or (
     visibility = 'company'
     and company_id in (select * from public.current_user_company_ids(church_id))
@@ -431,5 +469,6 @@ on public.documents for all
 using (public.current_user_has_role(church_id, array['super_admin', 'church_admin']))
 with check (public.current_user_has_role(church_id, array['super_admin', 'church_admin']));
 
--- TODO: consider separate RPCs for creating reports and follow-up cases once the app flow is implemented.
--- That would keep cross-table consistency checks out of client-side writes.
+-- TODO: create follow-up cases through trusted server code after report submission
+-- and absentee validation. Normal client writes should not manage the full
+-- report -> absentee -> follow-up -> task workflow directly.

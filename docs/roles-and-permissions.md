@@ -56,6 +56,7 @@ Company leaders can:
 - Access leadership documents made available to them.
 
 Company leaders should not see unrelated company data unless explicitly granted.
+Report submission and task completion should be handled through trusted Server Actions or RPCs so review fields, assignments, and linked records stay admin-controlled.
 
 ## Assistant Leader
 
@@ -95,6 +96,7 @@ General leaders can:
 - Access documents visible to all leaders or their role.
 
 General leaders should not access unrelated company reports, absentee records, or follow-up cases.
+Assigned task completion should be exposed through a narrow trusted action, not broad table updates from the client.
 
 ## Permission Principles
 

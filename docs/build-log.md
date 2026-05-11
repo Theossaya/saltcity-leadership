@@ -31,3 +31,15 @@ The first database draft was prepared without connecting to Supabase or running 
 - Created `supabase/sql/003_seed_data.sql` with manual seed data and clear placeholders for real Supabase Auth user UUIDs.
 - Added `docs/database-schema.md` explaining the schema, company workflow backbone, identity model, RLS approach, and intentional MVP exclusions.
 - Updated `docs/roles-and-permissions.md` with the six role values and first-pilot permission expectations.
+
+## Day 1 Afternoon — Schema/RLS review fix pass
+
+The schema and RLS drafts were tightened after review, without connecting to Supabase or running SQL:
+
+- Fixed `all_leaders` document visibility so it requires active leadership membership in the same church.
+- Added duplicate absentee prevention with one absentee row per report/member.
+- Added stronger same-church and same-company integrity constraints for the core report and absentee workflow.
+- Removed broad assigned-user update policies and documented the safer RPC/server-action direction for task completion, follow-up contact updates, event checklist completion, and report submission.
+- Added a direct nullable `follow_up_case_id` link on `tasks` for the MVP follow-up task workflow.
+- Added basic audience/visibility consistency checks for announcements and documents.
+- Updated schema documentation to explain the direct follow-up task link, trusted workflow actions, document membership checks, and absentee uniqueness.
