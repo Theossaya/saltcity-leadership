@@ -3,3 +3,10 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
+
+Before making code changes, also read:
+
+- `docs/ai-agent-rules.md`
+- `docs/product-brief.md`
+- `docs/mvp-scope.md`
+- `docs/ui-guidelines.md`
