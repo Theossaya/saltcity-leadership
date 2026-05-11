@@ -21,3 +21,13 @@ The MVP foundation was prepared with:
 - Supabase helper placeholders created under `src/lib/supabase/`.
 - App and workflow constants created under `src/lib/constants/`.
 - Foundation folders prepared under `src/components/`, `src/lib/`, and `src/features/`.
+
+## Day 1 Afternoon — Database schema draft
+
+The first database draft was prepared without connecting to Supabase or running SQL:
+
+- Created `supabase/sql/001_initial_schema.sql` with the MVP tables, constraints, timestamps, triggers, and indexes.
+- Created `supabase/sql/002_rls_policies.sql` with a conservative first-pass RLS policy draft and helper functions.
+- Created `supabase/sql/003_seed_data.sql` with manual seed data and clear placeholders for real Supabase Auth user UUIDs.
+- Added `docs/database-schema.md` explaining the schema, company workflow backbone, identity model, RLS approach, and intentional MVP exclusions.
+- Updated `docs/roles-and-permissions.md` with the six role values and first-pilot permission expectations.
