@@ -69,3 +69,11 @@ The app typography was aligned with the church visual identity:
 
 - Wired the local Galano Grotesque font files through `next/font/local`.
 - Set Galano Grotesque as the primary sans font for the app with system fallbacks.
+
+## Day 2 Design — Visual direction locked
+
+The final visual direction was documented before building the AppShell:
+
+- Locked the direction as Premium Pastoral Operations.
+- Defined the app as a private leadership command center with premium pastoral warmth, mobile banking clarity, editorial restraint, and operational urgency.
+- Documented the restrained warm palette, Galano Grotesque typography rules, dashboard hierarchy, mobile interaction rules, component principles, and screen mood guidance.
