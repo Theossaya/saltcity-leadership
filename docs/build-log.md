@@ -62,3 +62,10 @@ The manual Supabase API grants were documented without connecting to Supabase or
 - Created `supabase/sql/004_api_grants.sql` with the explicit `authenticated` role grants needed after disabling automatic table exposure.
 - Documented that the grants expose table access to the Supabase client/API role while RLS still controls row-level visibility.
 - Reiterated that `service_role` and other secret keys must never be used in browser code.
+
+## Day 2 Design — Galano Grotesque font integration
+
+The app typography was aligned with the church visual identity:
+
+- Wired the local Galano Grotesque font files through `next/font/local`.
+- Set Galano Grotesque as the primary sans font for the app with system fallbacks.

@@ -45,3 +45,9 @@ Important MVP screens include:
 - Use restrained color to communicate status and priority.
 - Prefer simple layouts over decorative components.
 - Design around repeat weekly use by busy leaders.
+
+## Typography
+
+Galano Grotesque is the primary app font. Use it with restraint, strong spacing, and a clear hierarchy so the interface feels specific to SaltCity while remaining calm and operational.
+
+Avoid heavy decorative typography. Prefer the 400, 500, 600, and 700 weights only.
