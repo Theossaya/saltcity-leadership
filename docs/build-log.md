@@ -43,3 +43,14 @@ The schema and RLS drafts were tightened after review, without connecting to Sup
 - Added a direct nullable `follow_up_case_id` link on `tasks` for the MVP follow-up task workflow.
 - Added basic audience/visibility consistency checks for announcements and documents.
 - Updated schema documentation to explain the direct follow-up task link, trusted workflow actions, document membership checks, and absentee uniqueness.
+
+## Day 1 Evening — Auth proof
+
+The first Supabase Auth proof was added without introducing custom authentication or schema changes:
+
+- Added a mobile-first login page using shadcn/ui components and Supabase email/password sign-in.
+- Added protected dashboard placeholder with session checks, role display, church display, admin/company/leader placeholder branching, and logout.
+- Added a simple current-user helper that reads the Supabase auth user, profile, active church memberships, primary role, church, and assigned company.
+- Added logout through a Server Action using the Supabase server client.
+- Added root route protection for `/dashboard`, `/companies`, `/reports`, `/follow-up`, `/tasks`, `/more`, and `/admin`, with authenticated `/login` users redirected to `/dashboard`.
+- Kept Supabase usage tied to `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from the existing environment helper setup.
