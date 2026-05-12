@@ -111,6 +111,14 @@ The first-pass intent is:
 
 Sensitive workflow updates should use Server Actions or dedicated RPCs rather than broad client-side updates. This applies especially to report submission/review, follow-up contact updates, task completion, and event checklist completion. RLS protects row visibility, but these flows need column-level and cross-table validation that is safer in trusted server code.
 
+## API Grants
+
+Because Supabase automatic table exposure was disabled for security, the MVP also includes `supabase/sql/004_api_grants.sql`. Run it after `supabase/sql/001_initial_schema.sql` and `supabase/sql/002_rls_policies.sql`.
+
+The file grants `authenticated` usage on the `public` schema and `select` access on the MVP tables that authenticated leaders need through the Supabase client/API. These grants expose the tables to the API role; RLS policies still decide which rows each user can see.
+
+Browser code must never use `service_role` or other secret keys. Client-side Supabase usage should stay on the public anon key with authenticated sessions and RLS.
+
 ## Intentionally Left Out
 
 The MVP schema intentionally leaves out:

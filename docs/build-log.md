@@ -54,3 +54,11 @@ The first Supabase Auth proof was added without introducing custom authenticatio
 - Added logout through a Server Action using the Supabase server client.
 - Added root route protection for `/dashboard`, `/companies`, `/reports`, `/follow-up`, `/tasks`, `/more`, and `/admin`, with authenticated `/login` users redirected to `/dashboard`.
 - Kept Supabase usage tied to `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from the existing environment helper setup.
+
+## Day 1 Evening — Supabase API grants
+
+The manual Supabase API grants were documented without connecting to Supabase or running SQL:
+
+- Created `supabase/sql/004_api_grants.sql` with the explicit `authenticated` role grants needed after disabling automatic table exposure.
+- Documented that the grants expose table access to the Supabase client/API role while RLS still controls row-level visibility.
+- Reiterated that `service_role` and other secret keys must never be used in browser code.
