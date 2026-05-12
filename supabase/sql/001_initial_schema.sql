@@ -210,13 +210,14 @@ create table public.tasks (
   due_date date,
   priority text not null default 'normal' check (priority in ('low', 'normal', 'high', 'urgent')),
   status text not null default 'todo' check (status in ('todo', 'in_progress', 'blocked', 'done')),
-  follow_up_case_id uuid references public.follow_up_cases(id) on delete set null,
+  follow_up_case_id uuid,
   linked_entity_type text,
   linked_entity_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   foreign key (follow_up_case_id, church_id)
     references public.follow_up_cases(id, church_id)
+    on delete set null (follow_up_case_id)
 );
 
 create table public.announcements (
