@@ -1,28 +1,62 @@
 import { redirect } from "next/navigation";
 
+import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { logout } from "@/features/auth/actions";
 import { getCurrentUser } from "@/features/auth/get-current-user";
+import { formatRole } from "@/lib/utils/format-role";
 
-function formatRole(role: string | null) {
-  if (!role) {
-    return "No active role";
-  }
+type SupportingCard = {
+  title: string;
+  text: string;
+};
 
-  return role
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
+const adminCards: SupportingCard[] = [
+  {
+    title: "Companies overview",
+    text: "Company structure and weekly visibility will be summarized here.",
+  },
+  {
+    title: "Pending reports",
+    text: "Submitted and missing report status will appear here.",
+  },
+  {
+    title: "Follow-up queue",
+    text: "Open absentee and pastoral follow-up cases will appear here.",
+  },
+];
+
+const companyLeaderCards: SupportingCard[] = [
+  {
+    title: "My company",
+    text: "Company members and weekly reporting context will appear here.",
+  },
+  {
+    title: "Report status",
+    text: "Draft, submitted, and reviewed states will appear here.",
+  },
+  {
+    title: "Follow-up attention",
+    text: "Absentees needing care will appear here after reports are added.",
+  },
+];
+
+const generalLeaderCards: SupportingCard[] = [
+  {
+    title: "Announcements",
+    text: "Leadership announcements will appear here.",
+  },
+  {
+    title: "Assigned tasks",
+    text: "Personal responsibilities and task status will appear here.",
+  },
+];
 
 export default async function DashboardPage() {
   const { user, profile, primaryRole, church, assignedCompany } =
@@ -38,64 +72,108 @@ export default async function DashboardPage() {
   const isCompanyLeader =
     primaryRole === "company_leader" || primaryRole === "assistant_leader";
 
+  const attention = isAdmin
+    ? {
+        title: "Leadership status",
+        text: "Review reports, follow-up cases, and assignments from one place.",
+        action: "Review dashboard",
+      }
+    : isCompanyLeader
+      ? {
+          title: "This week's company report",
+          text: "Prepare attendance, absentees, and follow-up notes for your company.",
+          action: "Open report",
+        }
+      : {
+          title: "Leadership updates",
+          text: "Announcements, tasks, and event responsibilities will appear here.",
+          action: null,
+        };
+
+  const supportingCards = isAdmin
+    ? adminCards
+    : isCompanyLeader
+      ? companyLeaderCards
+      : generalLeaderCards;
+
   return (
-    <main className="min-h-screen bg-muted/30 px-4 py-6">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-        <section className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-muted-foreground">Signed in as</p>
-            <h1 className="truncate text-2xl font-semibold tracking-tight">
-              {displayName}
-            </h1>
+    <AppShell
+      displayName={displayName}
+      role={primaryRole}
+      churchName={church?.name}
+    >
+      <section className="grid gap-3">
+        <p className="text-sm font-medium text-muted-foreground">
+          Welcome, {displayName}
+        </p>
+        <div className="grid gap-2">
+          <h1 className="text-3xl font-semibold text-foreground">
+            What needs attention?
+          </h1>
+          <div className="flex flex-wrap gap-2">
+            <Badge className="bg-primary text-primary-foreground">
+              {formatRole(primaryRole)}
+            </Badge>
+            {church ? <Badge variant="outline">{church.name}</Badge> : null}
+            {isCompanyLeader && assignedCompany ? (
+              <Badge variant="secondary">{assignedCompany.name}</Badge>
+            ) : null}
           </div>
-          <form action={logout}>
-            <Button type="submit" variant="outline">
-              Log out
-            </Button>
-          </form>
-        </section>
+        </div>
+      </section>
 
-        <Card className="rounded-lg">
-          <CardHeader>
-            <CardTitle>Dashboard</CardTitle>
-            <CardDescription>
-              Authentication, session persistence, and role detection proof.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">{formatRole(primaryRole)}</Badge>
-              {church ? <Badge variant="outline">{church.name}</Badge> : null}
-            </div>
-
-            {isAdmin ? (
-              <p className="text-sm">Admin dashboard placeholder</p>
-            ) : null}
-
-            {isCompanyLeader ? (
-              <div className="grid gap-1 text-sm">
-                {assignedCompany ? (
-                  <p className="font-medium">{assignedCompany.name}</p>
-                ) : (
-                  <p className="text-muted-foreground">
-                    No assigned company found.
-                  </p>
-                )}
-                <p>Company leader dashboard placeholder</p>
-              </div>
-            ) : null}
-
-            {!isAdmin && !isCompanyLeader ? (
-              <p className="text-sm">Leader dashboard placeholder</p>
-            ) : null}
-          </CardContent>
-          <CardFooter>
-            <p className="text-xs text-muted-foreground">
-              Product modules will be added after the auth proof is verified.
+      <Card className="rounded-lg border-border/80 bg-card shadow-sm">
+        <CardHeader className="gap-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">
+            Primary attention
+          </p>
+          <CardTitle className="text-2xl font-semibold">
+            {attention.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <div className="grid gap-2">
+            <p className="text-sm leading-6 text-muted-foreground">
+              {attention.text}
             </p>
-          </CardFooter>
-        </Card>
-      </div>
-    </main>
+            {isCompanyLeader ? (
+              <p className="text-sm font-medium text-foreground">
+                {assignedCompany
+                  ? `Assigned company: ${assignedCompany.name}`
+                  : "No assigned company found."}
+              </p>
+            ) : null}
+          </div>
+          {attention.action ? (
+            <Button
+              type="button"
+              disabled
+              className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+            >
+              {attention.action}
+            </Button>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <section className="grid gap-3">
+        {supportingCards.map((card) => (
+          <Card
+            key={card.title}
+            className="rounded-lg border-border/80 bg-card shadow-sm"
+            size="sm"
+          >
+            <CardHeader>
+              <CardTitle>{card.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {card.text}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+    </AppShell>
   );
 }

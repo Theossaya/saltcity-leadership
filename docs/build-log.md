@@ -77,3 +77,13 @@ The final visual direction was documented before building the AppShell:
 - Locked the direction as Premium Pastoral Operations.
 - Defined the app as a private leadership command center with premium pastoral warmth, mobile banking clarity, editorial restraint, and operational urgency.
 - Documented the restrained warm palette, Galano Grotesque typography rules, dashboard hierarchy, mobile interaction rules, component principles, and screen mood guidance.
+
+## Day 2 Morning — AppShell foundation
+
+The protected leadership app foundation was added using the Premium Pastoral Operations direction:
+
+- Created the AppShell with a simple premium header, mobile-first content width, warm off-white background, and bottom spacing for app navigation.
+- Added a clean header with app identity, leader identity, role badge, church name, and compact logout.
+- Added thumb-friendly bottom navigation for Home, Reports, Follow-up, Tasks, and More.
+- Added protected placeholder pages for reports, follow-up, tasks, companies, and more.
+- Redesigned the dashboard foundation around the "What needs attention?" hierarchy with role-aware placeholder cards.
