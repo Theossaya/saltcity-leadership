@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getCurrentUser } from "@/features/auth/get-current-user";
+import { startWeeklyReportDraft } from "@/features/reports/actions";
 import { AdminReportCompanyCard } from "@/features/reports/components/admin-report-company-card";
 import { ReportEmptyState } from "@/features/reports/components/report-empty-state";
 import { ReportStatusBadge } from "@/features/reports/components/report-status-badge";
@@ -72,7 +73,18 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default async function ReportsPage() {
+type ReportsPageProps = {
+  searchParams?: Promise<{
+    error?: string | string[];
+  }>;
+};
+
+export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const errorParam = resolvedSearchParams?.error;
+  const actionError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "unable-to-start-draft";
   const { user, profile, primaryRole, churchId, church } = await getCurrentUser();
 
   if (!user) {
@@ -160,9 +172,23 @@ export default async function ReportsPage() {
     const workspaceResult = await getCompanyReportWorkspace(user.id, churchId);
     const workspace = workspaceResult.data;
     const statusCopy = getCompanyStatusCopy(workspace.reportStatus);
+    const canStartDisplayedReport =
+      workspace.company?.status === "active" &&
+      workspace.reportStatus === "not_started";
+    const isDisplayedCompanyInactive =
+      workspace.company?.status === "inactive";
+    const reportCardBody = isDisplayedCompanyInactive
+      ? "This company is inactive, so a weekly report draft cannot be started for it. Ask an admin to confirm your current company assignment."
+      : workspace.reportStatus === "not_started"
+        ? "Start a draft for this week. Report fields, absentee entry, and submission will be added in later reporting passes."
+        : "Report editing, absentee entry, and submission controls will be added in later reporting passes.";
 
     content = (
       <>
+        {actionError ? (
+          <QueryNotice message="We could not start this week's draft report. Please try again or ask an admin to confirm your company assignment." />
+        ) : null}
+
         {workspaceResult.error ? (
           <QueryNotice message={workspaceResult.error} />
         ) : null}
@@ -190,18 +216,41 @@ export default async function ReportsPage() {
                   {statusCopy.title}
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Report creation and submission controls will be added in the
-                  next reporting pass.
+                  {reportCardBody}
                 </p>
               </div>
 
-              <Button
-                type="button"
-                disabled
-                className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-              >
-                {statusCopy.cta}
-              </Button>
+              {canStartDisplayedReport ? (
+                <form action={startWeeklyReportDraft}>
+                  <input
+                    type="hidden"
+                    name="companyId"
+                    value={workspace.company.id}
+                  />
+                  <Button
+                    type="submit"
+                    className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+                  >
+                    Start report
+                  </Button>
+                </form>
+              ) : workspace.reportStatus === "not_started" ? (
+                <Button
+                  type="button"
+                  disabled
+                  className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+                >
+                  Start report
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  disabled
+                  className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+                >
+                  {statusCopy.cta}
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (

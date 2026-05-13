@@ -108,3 +108,23 @@ The read-only reports foundation was added without schema changes or write actio
 - Added an admin reports overview with summary counts and mobile-friendly company report cards.
 - Improved dashboard report cards so company leaders and admins can move into Reports.
 - Left report submission, absentee entry, follow-up case creation, and all write actions for later passes.
+
+## Day 3 Afternoon — Start draft report
+
+The first controlled write flow was added for weekly reports:
+
+- Added a Server Action that lets assigned company leaders and assistant leaders start a draft report for the current week from `/reports`.
+- Kept the action role-aware and RLS-respecting, with duplicate prevention by checking the current company and report week before insert.
+- Created `supabase/sql/005_report_write_grants.sql` with the minimum authenticated `insert` grant for `public.weekly_reports`; RLS remains responsible for row-level restrictions.
+- Activated only the `Start report` CTA for `not_started` company leader workspaces.
+- Left report editing, absentee entry, submission, follow-up case creation, and review/approval out of this pass.
+
+## Day 3 Afternoon — Start draft report review fixes
+
+The start draft flow was tightened after review:
+
+- Updated `supabase/sql/005_report_write_grants.sql` to replace the broad weekly report insert policy with a draft-only company leader policy for active assigned companies.
+- Constrained direct draft inserts to the current `Africa/Lagos` report week.
+- Passed the displayed company id through the `/reports` start form and validated it server-side before draft creation.
+- Disabled the start CTA for inactive displayed companies and kept the calm notice in the report workspace.
+- Required direct draft inserts to set `total_members` to the current active company member count, preserving the report snapshot even if a leader bypasses the app flow.
