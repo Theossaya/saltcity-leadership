@@ -30,7 +30,9 @@ const adminCards: SupportingCard[] = [
   },
   {
     title: "Pending reports",
-    text: "Submitted and missing report status will appear here.",
+    text: "Submitted and missing report visibility is available in Reports.",
+    href: "/reports",
+    linkLabel: "Open reports",
   },
   {
     title: "Follow-up queue",
@@ -95,7 +97,9 @@ export default async function DashboardPage() {
           },
           {
             title: "Report status",
-            text: "Draft, submitted, and reviewed states will appear here.",
+            text: "Your weekly report workspace is available from Reports.",
+            href: "/reports",
+            linkLabel: "Open reports",
           },
           {
             title: "Follow-up attention",

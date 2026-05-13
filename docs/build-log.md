@@ -97,3 +97,14 @@ The read-only company module foundation was added without schema changes or writ
 - Added the assigned company view for company leaders and assistant leaders.
 - Added read-only member visibility for assigned company leaders.
 - Improved dashboard company cards so admins and assigned company leaders can move into the Companies view.
+
+## Day 3 Morning — Reports foundation
+
+The read-only reports foundation was added without schema changes or write actions:
+
+- Created RLS-respecting Supabase query helpers for current week reports, company leader report workspace data, and admin report overview data.
+- Added a deterministic Monday-to-Sunday current week range for the reporting UI.
+- Replaced the Reports placeholder with a company leader workspace showing assigned company, current week, and report status.
+- Added an admin reports overview with summary counts and mobile-friendly company report cards.
+- Improved dashboard report cards so company leaders and admins can move into Reports.
+- Left report submission, absentee entry, follow-up case creation, and all write actions for later passes.
