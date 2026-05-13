@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +17,16 @@ import { formatRole } from "@/lib/utils/format-role";
 type SupportingCard = {
   title: string;
   text: string;
+  href?: string;
+  linkLabel?: string;
 };
 
 const adminCards: SupportingCard[] = [
   {
     title: "Companies overview",
-    text: "Company structure and weekly visibility will be summarized here.",
+    text: "Company structure and leadership visibility are now available.",
+    href: "/companies",
+    linkLabel: "Open companies",
   },
   {
     title: "Pending reports",
@@ -29,21 +35,6 @@ const adminCards: SupportingCard[] = [
   {
     title: "Follow-up queue",
     text: "Open absentee and pastoral follow-up cases will appear here.",
-  },
-];
-
-const companyLeaderCards: SupportingCard[] = [
-  {
-    title: "My company",
-    text: "Company members and weekly reporting context will appear here.",
-  },
-  {
-    title: "Report status",
-    text: "Draft, submitted, and reviewed states will appear here.",
-  },
-  {
-    title: "Follow-up attention",
-    text: "Absentees needing care will appear here after reports are added.",
   },
 ];
 
@@ -93,7 +84,24 @@ export default async function DashboardPage() {
   const supportingCards = isAdmin
     ? adminCards
     : isCompanyLeader
-      ? companyLeaderCards
+      ? [
+          {
+            title: "My company",
+            text: assignedCompany
+              ? `${assignedCompany.name} is ready in your company view.`
+              : "Your assigned company will appear after admin assignment.",
+            href: "/companies",
+            linkLabel: "Open my company",
+          },
+          {
+            title: "Report status",
+            text: "Draft, submitted, and reviewed states will appear here.",
+          },
+          {
+            title: "Follow-up attention",
+            text: "Absentees needing care will appear here after reports are added.",
+          },
+        ]
       : generalLeaderCards;
 
   return (
@@ -170,6 +178,19 @@ export default async function DashboardPage() {
               <p className="text-sm leading-6 text-muted-foreground">
                 {card.text}
               </p>
+              {card.href ? (
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="mt-3 h-9 px-0 text-primary hover:bg-transparent hover:text-primary/80"
+                >
+                  <Link href={card.href}>
+                    {card.linkLabel}
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </Link>
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
         ))}

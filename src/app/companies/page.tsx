@@ -1,17 +1,128 @@
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/features/auth/get-current-user";
+import { CompanyCard } from "@/features/companies/components/company-card";
+import { CompanyEmptyState } from "@/features/companies/components/company-empty-state";
+import { MemberList } from "@/features/companies/components/member-list";
+import {
+  getAdminCompaniesOverview,
+  getAssignedCompanyDetails,
+  getCompanyMembers,
+} from "@/features/companies/queries";
+
+function QueryNotice({ message }: { message: string }) {
+  return (
+    <div className="rounded-lg border border-border/80 bg-[#FBFAF8] px-4 py-3 text-sm leading-6 text-muted-foreground">
+      {message}
+    </div>
+  );
+}
 
 export default async function CompaniesPage() {
-  const { user, profile, primaryRole, church } = await getCurrentUser();
+  const { user, profile, primaryRole, churchId, church } = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
   const displayName = profile?.full_name || user.email || "Signed-in leader";
+  const isAdmin =
+    primaryRole === "church_admin" || primaryRole === "super_admin";
+  const isCompanyLeader =
+    primaryRole === "company_leader" || primaryRole === "assistant_leader";
+
+  let content = (
+    <CompanyEmptyState title="Company visibility is limited">
+      <p>
+        Company structure will appear here when your leadership role is assigned
+        to a company.
+      </p>
+    </CompanyEmptyState>
+  );
+
+  if (!churchId) {
+    content = (
+      <CompanyEmptyState title="No active church membership found">
+        <p>
+          Company visibility depends on an active church membership. Ask an
+          admin to confirm your access.
+        </p>
+      </CompanyEmptyState>
+    );
+  } else if (isAdmin) {
+    const companiesResult = await getAdminCompaniesOverview(churchId);
+
+    content = (
+      <>
+        {companiesResult.error ? (
+          <QueryNotice message={companiesResult.error} />
+        ) : null}
+
+        {companiesResult.data.length > 0 ? (
+          <section className="grid gap-3">
+            {companiesResult.data.map((company) => (
+              <CompanyCard
+                key={company.id}
+                company={company}
+                memberCount={company.memberCount}
+              />
+            ))}
+          </section>
+        ) : (
+          <CompanyEmptyState title="No companies found">
+            <p>
+              Company structure will appear here after companies are added for
+              this church.
+            </p>
+          </CompanyEmptyState>
+        )}
+      </>
+    );
+  } else if (isCompanyLeader) {
+    const companyResult = await getAssignedCompanyDetails(user.id, churchId);
+    const membersResult = companyResult.data
+      ? await getCompanyMembers(companyResult.data.id, churchId)
+      : { data: [], error: null };
+
+    content = companyResult.error && !companyResult.data ? (
+      <QueryNotice message={companyResult.error} />
+    ) : companyResult.data ? (
+      <>
+        {companyResult.error ? <QueryNotice message={companyResult.error} /> : null}
+        {membersResult.error ? <QueryNotice message={membersResult.error} /> : null}
+
+        <CompanyCard company={companyResult.data} emphasis />
+
+        <section className="grid gap-3">
+          <div className="grid gap-1">
+            <h2 className="text-xl font-semibold text-foreground">Members</h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Read-only company member visibility for weekly reporting.
+            </p>
+          </div>
+
+          {membersResult.data.length > 0 ? (
+            <MemberList members={membersResult.data} />
+          ) : (
+            <CompanyEmptyState title="No members found">
+              <p>
+                Company members will appear here when they are added by an
+                admin.
+              </p>
+            </CompanyEmptyState>
+          )}
+        </section>
+      </>
+    ) : (
+      <CompanyEmptyState title="No assigned company found">
+        <p>
+          Your company view will appear when an admin assigns you as a company
+          leader or assistant leader.
+        </p>
+      </CompanyEmptyState>
+    );
+  }
 
   return (
     <AppShell
@@ -19,16 +130,18 @@ export default async function CompaniesPage() {
       role={primaryRole}
       churchName={church?.name}
     >
-      <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">Companies</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Company structure and member visibility will appear here.
-          </p>
-        </CardContent>
-      </Card>
+      <section className="grid gap-2">
+        <h1 className="text-3xl font-semibold text-foreground">
+          {isCompanyLeader ? "My Company" : "Companies"}
+        </h1>
+        <p className="text-sm leading-6 text-muted-foreground">
+          {isCompanyLeader
+            ? "Assigned company structure and member visibility."
+            : "Company structure and leadership visibility."}
+        </p>
+      </section>
+
+      {content}
     </AppShell>
   );
 }

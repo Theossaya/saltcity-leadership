@@ -87,3 +87,13 @@ The protected leadership app foundation was added using the Premium Pastoral Ope
 - Added thumb-friendly bottom navigation for Home, Reports, Follow-up, Tasks, and More.
 - Added protected placeholder pages for reports, follow-up, tasks, companies, and more.
 - Redesigned the dashboard foundation around the "What needs attention?" hierarchy with role-aware placeholder cards.
+
+## Day 2 — Company module foundation
+
+The read-only company module foundation was added without schema changes or write actions:
+
+- Created RLS-respecting Supabase query helpers for company overview, assigned company details, and company members.
+- Replaced the Companies placeholder with an admin company overview showing leadership assignments and member counts.
+- Added the assigned company view for company leaders and assistant leaders.
+- Added read-only member visibility for assigned company leaders.
+- Improved dashboard company cards so admins and assigned company leaders can move into the Companies view.
