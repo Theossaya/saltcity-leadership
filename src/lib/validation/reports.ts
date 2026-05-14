@@ -29,3 +29,7 @@ export function createDraftWeeklyReportUpdateSchema(totalMembers: number) {
 export type DraftWeeklyReportUpdateInput = z.infer<
   typeof draftWeeklyReportUpdateBaseSchema
 >;
+
+export const submitWeeklyReportSchema = draftWeeklyReportUpdateBaseSchema;
+
+export type SubmitWeeklyReportInput = z.infer<typeof submitWeeklyReportSchema>;

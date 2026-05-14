@@ -6,10 +6,14 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import { getCurrentReportWeek } from "@/features/reports/queries";
 import { createClient } from "@/lib/supabase/server";
-import { createDraftWeeklyReportUpdateSchema } from "@/lib/validation/reports";
+import {
+  createDraftWeeklyReportUpdateSchema,
+  submitWeeklyReportSchema,
+} from "@/lib/validation/reports";
 
 const START_DRAFT_ERROR_PATH = "/reports?error=unable-to-start-draft";
 const UPDATE_DRAFT_ERROR_PATH = "/reports?error=unable-to-update-draft";
+const SUBMIT_REPORT_ERROR_PATH = "/reports?error=unable-to-submit-report";
 
 type AssignedCompanyRow = {
   id: string;
@@ -28,11 +32,21 @@ type DraftReportRow = {
   status: string;
 };
 
+type SubmittableDraftReportRow = DraftReportRow & {
+  total_members: number;
+  present_count: number;
+  absent_count: number;
+};
+
 function canStartReportDraft(role: string | null) {
   return role === "company_leader" || role === "assistant_leader";
 }
 
 function canUpdateReportDraft(role: string | null) {
+  return role === "company_leader" || role === "assistant_leader";
+}
+
+function canSubmitReport(role: string | null) {
   return role === "company_leader" || role === "assistant_leader";
 }
 
@@ -235,4 +249,157 @@ export async function updateDraftWeeklyReport(formData: FormData) {
   revalidatePath("/reports");
   revalidatePath("/dashboard");
   redirect("/reports?updated=draft");
+}
+
+export async function submitWeeklyReport(formData: FormData) {
+  const { user, primaryRole, churchId } = await getCurrentUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!canSubmitReport(primaryRole) || !churchId) {
+    redirect(SUBMIT_REPORT_ERROR_PATH);
+  }
+
+  const supabase = await createClient();
+  const { reportWeekStart, reportWeekEnd } = getCurrentReportWeek();
+  const reportId = getFormString(formData, "reportId");
+  const companyId = getFormString(formData, "companyId");
+
+  if (!isUuid(reportId) || !isUuid(companyId)) {
+    redirect(SUBMIT_REPORT_ERROR_PATH);
+  }
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id")
+    .eq("church_id", churchId)
+    .eq("id", companyId)
+    .or(`leader_id.eq.${user.id},assistant_leader_id.eq.${user.id}`)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle<AssignedCompanyRow>();
+
+  if (companyError || !company) {
+    redirect(SUBMIT_REPORT_ERROR_PATH);
+  }
+
+  const [{ data: report, error: reportError }, { count, error: countError }] =
+    await Promise.all([
+      supabase
+        .from("weekly_reports")
+        .select(
+          "id, company_id, church_id, report_week_start, report_week_end, status, total_members, present_count, absent_count",
+        )
+        .eq("church_id", churchId)
+        .eq("company_id", company.id)
+        .eq("id", reportId)
+        .eq("report_week_start", reportWeekStart)
+        .eq("report_week_end", reportWeekEnd)
+        .eq("status", "draft")
+        .maybeSingle<SubmittableDraftReportRow>(),
+      supabase
+        .from("company_members")
+        .select("id", { count: "exact", head: true })
+        .eq("church_id", churchId)
+        .eq("company_id", company.id)
+        .eq("status", "active"),
+    ]);
+
+  if (reportError || countError || !report) {
+    redirect(SUBMIT_REPORT_ERROR_PATH);
+  }
+
+  const totalMembers = count ?? 0;
+  const draftValidation = createDraftWeeklyReportUpdateSchema(
+    totalMembers,
+  ).safeParse({
+    reportId,
+    companyId,
+    presentCount: formData.get("presentCount"),
+    absentCount: formData.get("absentCount"),
+    newVisitorsCount: formData.get("newVisitorsCount"),
+    generalNotes: formData.get("generalNotes"),
+    supportNeeded: formData.get("supportNeeded"),
+    testimonies: formData.get("testimonies"),
+  });
+
+  const submitValidation = submitWeeklyReportSchema.safeParse({
+    reportId,
+    companyId,
+    presentCount: formData.get("presentCount"),
+    absentCount: formData.get("absentCount"),
+    newVisitorsCount: formData.get("newVisitorsCount"),
+    generalNotes: formData.get("generalNotes"),
+    supportNeeded: formData.get("supportNeeded"),
+    testimonies: formData.get("testimonies"),
+  });
+
+  if (!draftValidation.success || !submitValidation.success) {
+    redirect(SUBMIT_REPORT_ERROR_PATH);
+  }
+
+  const values = draftValidation.data;
+
+  if (
+    values.companyId !== company.id ||
+    values.reportId !== report.id ||
+    report.company_id !== company.id ||
+    report.church_id !== churchId ||
+    report.status !== "draft" ||
+    report.report_week_start !== reportWeekStart ||
+    report.report_week_end !== reportWeekEnd ||
+    values.presentCount + values.absentCount !== totalMembers
+  ) {
+    redirect(SUBMIT_REPORT_ERROR_PATH);
+  }
+
+  const { error: draftUpdateError } = await supabase
+    .from("weekly_reports")
+    .update({
+      total_members: totalMembers,
+      present_count: values.presentCount,
+      absent_count: values.absentCount,
+      new_visitors_count: values.newVisitorsCount,
+      general_notes: values.generalNotes ?? null,
+      support_needed: values.supportNeeded ?? null,
+      testimonies: values.testimonies ?? null,
+    })
+    .eq("church_id", churchId)
+    .eq("company_id", company.id)
+    .eq("id", report.id)
+    .eq("report_week_start", reportWeekStart)
+    .eq("report_week_end", reportWeekEnd)
+    .eq("status", "draft")
+    .select("id")
+    .single();
+
+  if (draftUpdateError) {
+    redirect(SUBMIT_REPORT_ERROR_PATH);
+  }
+
+  const { error: submitUpdateError } = await supabase
+    .from("weekly_reports")
+    .update({
+      status: "submitted",
+      submitted_by: user.id,
+      submitted_at: new Date().toISOString(),
+    })
+    .eq("church_id", churchId)
+    .eq("company_id", company.id)
+    .eq("id", report.id)
+    .eq("report_week_start", reportWeekStart)
+    .eq("report_week_end", reportWeekEnd)
+    .eq("status", "draft")
+    .select("id")
+    .single();
+
+  if (submitUpdateError) {
+    redirect(SUBMIT_REPORT_ERROR_PATH);
+  }
+
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/reports?submitted=report");
 }

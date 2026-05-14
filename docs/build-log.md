@@ -138,3 +138,15 @@ The draft report editing foundation was added without expanding into submission 
 - Added a Server Action for saving draft report counts and notes while leaving submission, review, company, church, and report week fields untouched.
 - Added the company leader draft form on `/reports` for present count, absent count, new visitors, general notes, support needed, and testimonies.
 - Left submit report, absentee entry, follow-up case creation, and admin review out of this pass.
+
+## Day 4 Afternoon — Submit weekly report
+
+The current-week draft submission flow was added without expanding into review or follow-up workflows:
+
+- Created `supabase/sql/007_report_submit_grants.sql` with a column-limited authenticated update grant for submission fields only, plus a strict current-week draft submit policy for assigned active company leaders and assistant leaders.
+- Added a database trigger guard so draft content cannot be changed in the same update that submits the report.
+- Added a Server Action for submitting an existing current-week draft report while leaving counts, notes, company, church, report week, and review fields untouched.
+- Updated submission so it sends the visible draft fields and saves those draft-edit columns before locking the report, preventing unsaved draft edits from being silently lost.
+- Required all members to be accounted for before submission: `present_count + absent_count` must equal the current active company member count.
+- Locked editing after submission by showing the submitted state on `/reports` instead of the draft form.
+- Left absentee records, follow-up case creation, and admin review actions for later passes.

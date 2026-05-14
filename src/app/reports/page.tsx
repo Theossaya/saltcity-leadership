@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import {
   startWeeklyReportDraft,
+  submitWeeklyReport,
   updateDraftWeeklyReport,
 } from "@/features/reports/actions";
 import { AdminReportCompanyCard } from "@/features/reports/components/admin-report-company-card";
@@ -82,13 +83,27 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 type ReportsPageProps = {
   searchParams?: Promise<{
     error?: string | string[];
+    submitted?: string | string[];
     updated?: string | string[];
   }>;
 };
 
+function formatSubmittedDate(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeZone: "Africa/Lagos",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const resolvedSearchParams = await searchParams;
   const errorParam = resolvedSearchParams?.error;
+  const submittedParam = resolvedSearchParams?.submitted;
   const updatedParam = resolvedSearchParams?.updated;
   const actionError =
     (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
@@ -96,6 +111,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const updateError =
     (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
     "unable-to-update-draft";
+  const submitError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "unable-to-submit-report";
+  const reportSubmitted =
+    (Array.isArray(submittedParam) ? submittedParam[0] : submittedParam) ===
+    "report";
   const draftUpdated =
     (Array.isArray(updatedParam) ? updatedParam[0] : updatedParam) === "draft";
   const { user, profile, primaryRole, churchId, church } = await getCurrentUser();
@@ -194,6 +215,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       workspace.report
         ? workspace.report
         : null;
+    const submittedReport =
+      workspace.company?.status === "active" &&
+      workspace.reportStatus === "submitted" &&
+      workspace.report
+        ? workspace.report
+        : null;
+    const submittedAt = formatSubmittedDate(submittedReport?.submittedAt ?? null);
     const isDisplayedCompanyInactive =
       workspace.company?.status === "inactive";
     const reportCardBody = isDisplayedCompanyInactive
@@ -201,8 +229,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       : workspace.reportStatus === "not_started"
         ? "Start a draft for this week. Report fields, absentee entry, and submission will be added in later reporting passes."
         : workspace.reportStatus === "draft"
-          ? "Save this week's counts and basic notes. Submission, absentee entry, and follow-up creation are not active yet."
-          : "This report is no longer editable in this pass. Submission review controls will be added later.";
+          ? "Save this week's counts and basic notes before submitting for review."
+          : workspace.reportStatus === "submitted"
+            ? "This report has been submitted for review. Editing is disabled."
+            : "This report is no longer editable in this pass. Review controls will be added later.";
 
     content = (
       <>
@@ -214,8 +244,16 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           <QueryNotice message="We could not save this draft report. Check the counts and try again, or ask an admin to confirm your company assignment." />
         ) : null}
 
+        {submitError ? (
+          <QueryNotice message="We could not submit this report. Confirm every member is accounted for and try again, or ask an admin to confirm your company assignment." />
+        ) : null}
+
         {draftUpdated ? (
           <QueryNotice message="Draft report saved." />
+        ) : null}
+
+        {reportSubmitted ? (
+          <QueryNotice message="Report submitted. Editing is now locked while it waits for review." />
         ) : null}
 
         {workspaceResult.error ? (
@@ -360,13 +398,56 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     </div>
                   </div>
 
+                  <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
+                    <div>
+                      <h3 className="text-base font-semibold text-foreground">
+                        Submit report
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        Submitting locks this report for review. Editing will be
+                        disabled after submission.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Button
+                        type="submit"
+                        className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+                      >
+                        Save draft
+                      </Button>
+                      <Button
+                        type="submit"
+                        formAction={submitWeeklyReport}
+                        className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+                      >
+                        Submit report
+                      </Button>
+                    </div>
+                  </div>
+                </form>
+              ) : submittedReport ? (
+                <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
+                  <h3 className="text-base font-semibold text-foreground">
+                    Submitted for review
+                  </h3>
+                  <div className="grid gap-2 text-sm leading-6 text-muted-foreground">
+                    <p>
+                      Editing is disabled while this report waits for review.
+                    </p>
+                    {submittedAt ? <p>Submitted {submittedAt}</p> : null}
+                    {submittedReport.submittedBy ? (
+                      <p>Submitted by {submittedReport.submittedBy}</p>
+                    ) : null}
+                  </div>
                   <Button
-                    type="submit"
+                    type="button"
+                    disabled
                     className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
                   >
-                    Save draft
+                    Submitted
                   </Button>
-                </form>
+                </div>
               ) : workspace.reportStatus === "not_started" ? (
                 <Button
                   type="button"
