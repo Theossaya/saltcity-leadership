@@ -8,8 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { getCurrentUser } from "@/features/auth/get-current-user";
-import { startWeeklyReportDraft } from "@/features/reports/actions";
+import {
+  startWeeklyReportDraft,
+  updateDraftWeeklyReport,
+} from "@/features/reports/actions";
 import { AdminReportCompanyCard } from "@/features/reports/components/admin-report-company-card";
 import { ReportEmptyState } from "@/features/reports/components/report-empty-state";
 import { ReportStatusBadge } from "@/features/reports/components/report-status-badge";
@@ -76,15 +82,22 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 type ReportsPageProps = {
   searchParams?: Promise<{
     error?: string | string[];
+    updated?: string | string[];
   }>;
 };
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const resolvedSearchParams = await searchParams;
   const errorParam = resolvedSearchParams?.error;
+  const updatedParam = resolvedSearchParams?.updated;
   const actionError =
     (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
     "unable-to-start-draft";
+  const updateError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "unable-to-update-draft";
+  const draftUpdated =
+    (Array.isArray(updatedParam) ? updatedParam[0] : updatedParam) === "draft";
   const { user, profile, primaryRole, churchId, church } = await getCurrentUser();
 
   if (!user) {
@@ -175,18 +188,34 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     const canStartDisplayedReport =
       workspace.company?.status === "active" &&
       workspace.reportStatus === "not_started";
+    const draftReport =
+      workspace.company?.status === "active" &&
+      workspace.reportStatus === "draft" &&
+      workspace.report
+        ? workspace.report
+        : null;
     const isDisplayedCompanyInactive =
       workspace.company?.status === "inactive";
     const reportCardBody = isDisplayedCompanyInactive
       ? "This company is inactive, so a weekly report draft cannot be started for it. Ask an admin to confirm your current company assignment."
       : workspace.reportStatus === "not_started"
         ? "Start a draft for this week. Report fields, absentee entry, and submission will be added in later reporting passes."
-        : "Report editing, absentee entry, and submission controls will be added in later reporting passes.";
+        : workspace.reportStatus === "draft"
+          ? "Save this week's counts and basic notes. Submission, absentee entry, and follow-up creation are not active yet."
+          : "This report is no longer editable in this pass. Submission review controls will be added later.";
 
     content = (
       <>
         {actionError ? (
           <QueryNotice message="We could not start this week's draft report. Please try again or ask an admin to confirm your company assignment." />
+        ) : null}
+
+        {updateError ? (
+          <QueryNotice message="We could not save this draft report. Check the counts and try again, or ask an admin to confirm your company assignment." />
+        ) : null}
+
+        {draftUpdated ? (
+          <QueryNotice message="Draft report saved." />
         ) : null}
 
         {workspaceResult.error ? (
@@ -232,6 +261,110 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
                   >
                     Start report
+                  </Button>
+                </form>
+              ) : draftReport ? (
+                <form action={updateDraftWeeklyReport} className="grid gap-5">
+                  <input
+                    type="hidden"
+                    name="reportId"
+                    value={draftReport.id}
+                  />
+                  <input
+                    type="hidden"
+                    name="companyId"
+                    value={workspace.company.id}
+                  />
+
+                  <div className="rounded-lg border border-border/80 bg-[#FBFAF8] px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+                      Total members
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold text-foreground">
+                      {draftReport.totalMembers}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="presentCount">Present count</Label>
+                      <Input
+                        id="presentCount"
+                        name="presentCount"
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        defaultValue={draftReport.presentCount}
+                        className="h-12 bg-background"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="absentCount">Absent count</Label>
+                      <Input
+                        id="absentCount"
+                        name="absentCount"
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        defaultValue={draftReport.absentCount}
+                        className="h-12 bg-background"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="newVisitorsCount">New visitors</Label>
+                      <Input
+                        id="newVisitorsCount"
+                        name="newVisitorsCount"
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        defaultValue={draftReport.newVisitorsCount}
+                        className="h-12 bg-background"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="generalNotes">General notes</Label>
+                      <Textarea
+                        id="generalNotes"
+                        name="generalNotes"
+                        maxLength={1500}
+                        defaultValue={draftReport.generalNotes ?? ""}
+                        className="min-h-28 bg-background"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="supportNeeded">Support needed</Label>
+                      <Textarea
+                        id="supportNeeded"
+                        name="supportNeeded"
+                        maxLength={1500}
+                        defaultValue={draftReport.supportNeeded ?? ""}
+                        className="min-h-28 bg-background"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="testimonies">Testimonies</Label>
+                      <Textarea
+                        id="testimonies"
+                        name="testimonies"
+                        maxLength={1500}
+                        defaultValue={draftReport.testimonies ?? ""}
+                        className="min-h-28 bg-background"
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+                  >
+                    Save draft
                   </Button>
                 </form>
               ) : workspace.reportStatus === "not_started" ? (

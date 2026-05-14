@@ -128,3 +128,13 @@ The start draft flow was tightened after review:
 - Passed the displayed company id through the `/reports` start form and validated it server-side before draft creation.
 - Disabled the start CTA for inactive displayed companies and kept the calm notice in the report workspace.
 - Required direct draft inserts to set `total_members` to the current active company member count, preserving the report snapshot even if a leader bypasses the app flow.
+
+## Day 4 Morning — Draft report editing foundation
+
+The draft report editing foundation was added without expanding into submission or follow-up workflows:
+
+- Created `supabase/sql/006_report_draft_update_grants.sql` with column-limited authenticated update access for draft-edit fields only, plus a strict current-week draft update policy for assigned active company leaders and assistant leaders.
+- Added zod validation for draft counts and basic notes, including the total member count check.
+- Added a Server Action for saving draft report counts and notes while leaving submission, review, company, church, and report week fields untouched.
+- Added the company leader draft form on `/reports` for present count, absent count, new visitors, general notes, support needed, and testimonies.
+- Left submit report, absentee entry, follow-up case creation, and admin review out of this pass.

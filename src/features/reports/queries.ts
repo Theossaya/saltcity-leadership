@@ -38,6 +38,9 @@ export type WeeklyReportSummary = {
   presentCount: number;
   absentCount: number;
   newVisitorsCount: number;
+  generalNotes: string | null;
+  supportNeeded: string | null;
+  testimonies: string | null;
 };
 
 export type CompanyReportWorkspace = {
@@ -93,7 +96,13 @@ type WeeklyReportRow = {
   present_count: number;
   absent_count: number;
   new_visitors_count: number;
+  general_notes: string | null;
+  support_needed: string | null;
+  testimonies: string | null;
 };
+
+const WEEKLY_REPORT_SUMMARY_SELECT =
+  "id, company_id, report_week_start, report_week_end, status, submitted_at, submitted_by, total_members, present_count, absent_count, new_visitors_count, general_notes, support_needed, testimonies";
 
 function toDateInput(value: Date) {
   return value.toISOString().slice(0, 10);
@@ -141,6 +150,9 @@ function mapReport(
     presentCount: report.present_count,
     absentCount: report.absent_count,
     newVisitorsCount: report.new_visitors_count,
+    generalNotes: report.general_notes,
+    supportNeeded: report.support_needed,
+    testimonies: report.testimonies,
   };
 }
 
@@ -248,18 +260,14 @@ export async function getCompanyReportWorkspace(
     await Promise.all([
       supabase
         .from("weekly_reports")
-        .select(
-          "id, company_id, report_week_start, report_week_end, status, submitted_at, submitted_by, total_members, present_count, absent_count, new_visitors_count",
-        )
+        .select(WEEKLY_REPORT_SUMMARY_SELECT)
         .eq("church_id", churchId)
         .eq("company_id", company.id)
         .eq("report_week_start", week.reportWeekStart)
         .maybeSingle<WeeklyReportRow>(),
       supabase
         .from("weekly_reports")
-        .select(
-          "id, company_id, report_week_start, report_week_end, status, submitted_at, submitted_by, total_members, present_count, absent_count, new_visitors_count",
-        )
+        .select(WEEKLY_REPORT_SUMMARY_SELECT)
         .eq("church_id", churchId)
         .eq("company_id", company.id)
         .eq("status", "submitted")
@@ -340,9 +348,7 @@ export async function getAdminReportsOverview(
   const companyIds = companies.map((company) => company.id);
   const { data: reportsData, error: reportsError } = await supabase
     .from("weekly_reports")
-    .select(
-      "id, company_id, report_week_start, report_week_end, status, submitted_at, submitted_by, total_members, present_count, absent_count, new_visitors_count",
-    )
+    .select(WEEKLY_REPORT_SUMMARY_SELECT)
     .eq("church_id", churchId)
     .eq("report_week_start", week.reportWeekStart)
     .in("company_id", companyIds)
