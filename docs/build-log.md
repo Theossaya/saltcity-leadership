@@ -175,3 +175,13 @@ The read-only follow-up queue foundation was added without schema changes or wri
 - Replaced the Follow-up placeholder with mobile-friendly summary cards and sensitive absentee follow-up cards.
 - Updated dashboard follow-up cards to point to `/follow-up`.
 - Left follow-up case creation, marking contacted, assignment workflow, admin review, notifications, and all write actions for later passes.
+
+## Day 6 Morning — Tasks foundation
+
+The read-only tasks foundation was added without schema changes or write actions:
+
+- Created RLS-respecting task query helpers for church admin overview and leader task visibility using the existing `tasks` table.
+- Added mobile-friendly task summary cards, task cards, and empty states for `/tasks`.
+- Added admin visibility for church-wide tasks and leader visibility for assigned tasks, with safe enrichment for assignees, companies, and linked follow-up cases when visible.
+- Updated dashboard task cards to point to `/tasks` for admins and leaders.
+- Left task creation, completion/update actions, assignment workflow, notifications, admin review, and all task writes for later passes.

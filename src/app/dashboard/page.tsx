@@ -40,6 +40,12 @@ const adminCards: SupportingCard[] = [
     href: "/follow-up",
     linkLabel: "Open follow-up",
   },
+  {
+    title: "Assigned tasks",
+    text: "Church-wide task visibility is available in Tasks.",
+    href: "/tasks",
+    linkLabel: "Open tasks",
+  },
 ];
 
 const generalLeaderCards: SupportingCard[] = [
@@ -49,7 +55,9 @@ const generalLeaderCards: SupportingCard[] = [
   },
   {
     title: "Assigned tasks",
-    text: "Personal responsibilities and task status will appear here.",
+    text: "Assigned leadership tasks are available in Tasks.",
+    href: "/tasks",
+    linkLabel: "Open tasks",
   },
 ];
 
@@ -108,6 +116,12 @@ export default async function DashboardPage() {
             text: "Absentee follow-up visibility is available in Follow-up.",
             href: "/follow-up",
             linkLabel: "Open follow-up",
+          },
+          {
+            title: "Assigned tasks",
+            text: "Assigned tasks are available in Tasks.",
+            href: "/tasks",
+            linkLabel: "Open tasks",
           },
         ]
       : generalLeaderCards;
