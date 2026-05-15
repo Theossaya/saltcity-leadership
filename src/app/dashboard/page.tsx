@@ -46,12 +46,20 @@ const adminCards: SupportingCard[] = [
     href: "/tasks",
     linkLabel: "Open tasks",
   },
+  {
+    title: "Announcements",
+    text: "Leadership announcements are available in Announcements.",
+    href: "/announcements",
+    linkLabel: "Open announcements",
+  },
 ];
 
 const generalLeaderCards: SupportingCard[] = [
   {
     title: "Announcements",
-    text: "Leadership announcements will appear here.",
+    text: "Leadership announcements are available in Announcements.",
+    href: "/announcements",
+    linkLabel: "Open announcements",
   },
   {
     title: "Assigned tasks",
@@ -122,6 +130,12 @@ export default async function DashboardPage() {
             text: "Assigned tasks are available in Tasks.",
             href: "/tasks",
             linkLabel: "Open tasks",
+          },
+          {
+            title: "Announcements",
+            text: "Leadership updates and notices are available in Announcements.",
+            href: "/announcements",
+            linkLabel: "Open announcements",
           },
         ]
       : generalLeaderCards;

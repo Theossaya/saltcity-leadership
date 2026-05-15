@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/features/auth/get-current-user";
 
 const futureSections = [
   { label: "Companies", href: "/companies" },
-  { label: "Announcements", href: "#" },
+  { label: "Announcements", href: "/announcements" },
   { label: "Events", href: "#" },
   { label: "Documents", href: "#" },
   { label: "Units", href: "#" },
@@ -43,7 +43,9 @@ export default async function MorePage() {
                 aria-disabled={section.href === "#" ? "true" : undefined}
               >
                 {section.label}
-                <span className="text-xs text-muted-foreground">Future</span>
+                <span className="text-xs text-muted-foreground">
+                  {section.href === "#" ? "Future" : "Open"}
+                </span>
               </Link>
             ))}
           </div>

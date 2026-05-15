@@ -8,6 +8,7 @@ const protectedRoutes = [
   "/reports",
   "/follow-up",
   "/tasks",
+  "/announcements",
   "/more",
   "/admin",
 ];
@@ -56,6 +57,7 @@ export const config = {
     "/reports/:path*",
     "/follow-up/:path*",
     "/tasks/:path*",
+    "/announcements/:path*",
     "/more/:path*",
     "/admin/:path*",
   ],

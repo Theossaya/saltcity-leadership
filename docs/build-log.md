@@ -185,3 +185,13 @@ The read-only tasks foundation was added without schema changes or write actions
 - Added admin visibility for church-wide tasks and leader visibility for assigned tasks, with safe enrichment for assignees, companies, and linked follow-up cases when visible.
 - Updated dashboard task cards to point to `/tasks` for admins and leaders.
 - Left task creation, completion/update actions, assignment workflow, notifications, admin review, and all task writes for later passes.
+
+## Day 6 Afternoon — Announcements foundation
+
+The read-only announcements foundation was added without schema changes or write actions:
+
+- Created RLS-respecting announcement query helpers for church admin and leader visibility using the existing `announcements` table.
+- Added a role-aware `/announcements` page with mobile-friendly summary cards, announcement cards, and calm empty/restricted states.
+- Updated the More page so Announcements links to `/announcements`.
+- Updated dashboard announcement links for admins and leaders.
+- Left announcement creation, editing, notifications, read receipts, and all announcement writes for later passes.
