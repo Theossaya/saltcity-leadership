@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import {
+  addAbsenteeRecord,
+  removeAbsenteeRecord,
   startWeeklyReportDraft,
   submitWeeklyReport,
   updateDraftWeeklyReport,
@@ -25,8 +27,11 @@ import {
   getAdminReportsOverview,
   getCompanyReportWorkspace,
   getCurrentReportWeek,
+  type AbsenteeRecordSummary,
+  type CompanyMemberOption,
   type ReportStatus,
 } from "@/features/reports/queries";
+import { ABSENCE_REASON_LABELS, ABSENCE_REASONS } from "@/lib/constants/statuses";
 
 function QueryNotice({ message }: { message: string }) {
   return (
@@ -100,6 +105,276 @@ function formatSubmittedDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatAbsenceDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeZone: "Africa/Lagos",
+  }).format(new Date(`${value}T00:00:00+01:00`));
+}
+
+const REGULAR_SERVICE_DAYS = [
+  { day: 0, startHour: 9, startMinute: 0 },
+  { day: 3, startHour: 17, startMinute: 0 },
+  { day: 5, startHour: 17, startMinute: 0 },
+];
+
+function toDateInput(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getLagosNow() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+  }).formatToParts(new Date());
+  const value = (type: string) =>
+    Number(parts.find((part) => part.type === type)?.value);
+
+  return new Date(
+    Date.UTC(
+      value("year"),
+      value("month") - 1,
+      value("day"),
+      value("hour"),
+      value("minute"),
+    ),
+  );
+}
+
+function getDefaultAbsenceDate(weekStart: string, weekEnd: string) {
+  const startDate = new Date(`${weekStart}T00:00:00.000Z`);
+  const endDate = new Date(`${weekEnd}T00:00:00.000Z`);
+  endDate.setUTCHours(23, 59, 59, 999);
+  const now = getLagosNow();
+
+  const serviceDates = REGULAR_SERVICE_DAYS.map((serviceDay) => {
+    const date = new Date(startDate);
+    const daysFromStart =
+      (serviceDay.day - startDate.getUTCDay() + 7) % 7;
+
+    date.setUTCDate(startDate.getUTCDate() + daysFromStart);
+    date.setUTCHours(serviceDay.startHour, serviceDay.startMinute, 0, 0);
+
+    return date;
+  })
+    .filter((date) => date >= startDate && date <= endDate)
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  // Special programmes should become configurable later.
+  const mostRecentServiceDate = serviceDates
+    .filter((date) => date <= now)
+    .at(-1);
+
+  if (mostRecentServiceDate) {
+    return toDateInput(mostRecentServiceDate);
+  }
+
+  const wednesday = serviceDates.find((date) => date.getUTCDay() === 3);
+
+  return wednesday ? toDateInput(wednesday) : weekStart;
+}
+
+function AbsenteeRecordsList({
+  absenteeRecords,
+  canRemove,
+  reportId,
+  companyId,
+}: {
+  absenteeRecords: AbsenteeRecordSummary[];
+  canRemove: boolean;
+  reportId: string;
+  companyId: string;
+}) {
+  if (absenteeRecords.length === 0) {
+    return (
+      <div className="rounded-lg border border-border/80 bg-white px-4 py-3 text-sm text-muted-foreground">
+        No absentee records added yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      {absenteeRecords.map((absenteeRecord) => (
+        <div
+          key={absenteeRecord.id}
+          className="grid gap-3 rounded-lg border border-border/80 bg-white p-4 sm:grid-cols-[1fr_auto] sm:items-start"
+        >
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">
+              {absenteeRecord.companyMemberName}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {formatAbsenceDate(absenteeRecord.absenceDate)} ·{" "}
+              {ABSENCE_REASON_LABELS[
+                absenteeRecord.reason as keyof typeof ABSENCE_REASON_LABELS
+              ] ?? "No reason given"}
+            </p>
+            {absenteeRecord.reasonNote ? (
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {absenteeRecord.reasonNote}
+              </p>
+            ) : null}
+          </div>
+
+          {canRemove ? (
+            <form action={removeAbsenteeRecord}>
+              <input type="hidden" name="reportId" value={reportId} />
+              <input type="hidden" name="companyId" value={companyId} />
+              <input
+                type="hidden"
+                name="absenteeRecordId"
+                value={absenteeRecord.id}
+              />
+              <Button
+                type="submit"
+                variant="outline"
+                className="h-11 w-full border-border/80 bg-white sm:w-fit"
+              >
+                Remove
+              </Button>
+            </form>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AbsenteesSection({
+  reportId,
+  companyId,
+  weekStart,
+  weekEnd,
+  activeCompanyMembers,
+  absenteeRecords,
+  canEdit,
+}: {
+  reportId: string;
+  companyId: string;
+  weekStart: string;
+  weekEnd: string;
+  activeCompanyMembers: CompanyMemberOption[];
+  absenteeRecords: AbsenteeRecordSummary[];
+  canEdit: boolean;
+}) {
+  const absenteeMemberIds = new Set(
+    absenteeRecords.map((absenteeRecord) => absenteeRecord.companyMemberId),
+  );
+  const selectableMembers = activeCompanyMembers.filter(
+    (member) => !absenteeMemberIds.has(member.id),
+  );
+  const defaultAbsenceDate = getDefaultAbsenceDate(weekStart, weekEnd);
+
+  return (
+    <section className="grid gap-4 rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-foreground">
+            Absentees
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            {absenteeRecords.length} recorded for this report.
+          </p>
+        </div>
+      </div>
+
+      {canEdit ? (
+        <form action={addAbsenteeRecord} className="grid gap-4">
+          <input type="hidden" name="reportId" value={reportId} />
+          <input type="hidden" name="companyId" value={companyId} />
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="companyMemberId">Company member</Label>
+              <select
+                id="companyMemberId"
+                name="companyMemberId"
+                className="h-12 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                required
+                disabled={selectableMembers.length === 0}
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Select a member
+                </option>
+                {selectableMembers.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="absenceDate">Absence date</Label>
+              <Input
+                id="absenceDate"
+                name="absenceDate"
+                type="date"
+                min={weekStart}
+                max={weekEnd}
+                defaultValue={defaultAbsenceDate}
+                className="h-12 bg-background"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="reason">Reason</Label>
+              <select
+                id="reason"
+                name="reason"
+                className="h-12 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                defaultValue="no_reason_given"
+              >
+                {ABSENCE_REASONS.map((reason) => (
+                  <option key={reason} value={reason}>
+                    {ABSENCE_REASON_LABELS[reason]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="reasonNote">Notes</Label>
+              <Input
+                id="reasonNote"
+                name="reasonNote"
+                maxLength={1000}
+                className="h-12 bg-background"
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+            disabled={selectableMembers.length === 0}
+          >
+            Add absentee
+          </Button>
+        </form>
+      ) : null}
+
+      <AbsenteeRecordsList
+        absenteeRecords={absenteeRecords}
+        canRemove={canEdit}
+        reportId={reportId}
+        companyId={companyId}
+      />
+    </section>
+  );
+}
+
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const resolvedSearchParams = await searchParams;
   const errorParam = resolvedSearchParams?.error;
@@ -114,11 +389,17 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const submitError =
     (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
     "unable-to-submit-report";
+  const absenteesError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "unable-to-update-absentees";
   const reportSubmitted =
     (Array.isArray(submittedParam) ? submittedParam[0] : submittedParam) ===
     "report";
   const draftUpdated =
     (Array.isArray(updatedParam) ? updatedParam[0] : updatedParam) === "draft";
+  const absenteesUpdated =
+    (Array.isArray(updatedParam) ? updatedParam[0] : updatedParam) ===
+    "absentees";
   const { user, profile, primaryRole, churchId, church } = await getCurrentUser();
 
   if (!user) {
@@ -215,19 +496,28 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       workspace.report
         ? workspace.report
         : null;
-    const submittedReport =
+    const readOnlyReport =
       workspace.company?.status === "active" &&
-      workspace.reportStatus === "submitted" &&
-      workspace.report
+      workspace.report &&
+      ["submitted", "reviewed", "flagged"].includes(workspace.reportStatus)
         ? workspace.report
         : null;
-    const submittedAt = formatSubmittedDate(submittedReport?.submittedAt ?? null);
+    const readOnlySubmittedAt = formatSubmittedDate(
+      readOnlyReport?.submittedAt ?? null,
+    );
+    const draftCountsAccountForTotal = draftReport
+      ? draftReport.presentCount + draftReport.absentCount ===
+        draftReport.totalMembers
+      : false;
+    const draftAbsenteeCountMatchesExpected = draftReport
+      ? draftReport.absentCount === workspace.absenteeCount
+      : false;
     const isDisplayedCompanyInactive =
       workspace.company?.status === "inactive";
     const reportCardBody = isDisplayedCompanyInactive
       ? "This company is inactive, so a weekly report draft cannot be started for it. Ask an admin to confirm your current company assignment."
       : workspace.reportStatus === "not_started"
-        ? "Start a draft for this week. Report fields, absentee entry, and submission will be added in later reporting passes."
+        ? "Start a draft for this week, then add counts, notes, and absentee records before submission."
         : workspace.reportStatus === "draft"
           ? "Save this week's counts and basic notes before submitting for review."
           : workspace.reportStatus === "submitted"
@@ -245,11 +535,19 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         ) : null}
 
         {submitError ? (
-          <QueryNotice message="We could not submit this report. Confirm every member is accounted for and try again, or ask an admin to confirm your company assignment." />
+          <QueryNotice message="We could not submit this report. Confirm every member is accounted for, absentee records match the absent count, and try again." />
+        ) : null}
+
+        {absenteesError ? (
+          <QueryNotice message="We could not update absentee records. Confirm this is still a current week draft and try again." />
         ) : null}
 
         {draftUpdated ? (
           <QueryNotice message="Draft report saved." />
+        ) : null}
+
+        {absenteesUpdated ? (
+          <QueryNotice message="Absentee records updated." />
         ) : null}
 
         {reportSubmitted ? (
@@ -338,7 +636,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="absentCount">Absent count</Label>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Label htmlFor="absentCount">Absent count</Label>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {workspace.absenteeCount} absentee records for{" "}
+                          {draftReport.absentCount} expected
+                        </span>
+                      </div>
                       <Input
                         id="absentCount"
                         name="absentCount"
@@ -409,6 +713,22 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       </p>
                     </div>
 
+                    {!draftCountsAccountForTotal ? (
+                      <div className="rounded-lg border border-border/80 bg-white px-4 py-3 text-sm leading-6 text-muted-foreground">
+                        The saved draft counts do not account for every active
+                        member yet. Submission will validate the counts visible
+                        in this form when clicked.
+                      </div>
+                    ) : null}
+
+                    {!draftAbsenteeCountMatchesExpected ? (
+                      <div className="rounded-lg border border-border/80 bg-white px-4 py-3 text-sm leading-6 text-muted-foreground">
+                        The saved draft absent count does not match the current
+                        absentee records yet. Submission will validate the
+                        counts and records visible on this page when clicked.
+                      </div>
+                    ) : null}
+
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <Button
                         type="submit"
@@ -426,28 +746,54 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     </div>
                   </div>
                 </form>
-              ) : submittedReport ? (
-                <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
-                  <h3 className="text-base font-semibold text-foreground">
-                    Submitted for review
-                  </h3>
-                  <div className="grid gap-2 text-sm leading-6 text-muted-foreground">
-                    <p>
-                      Editing is disabled while this report waits for review.
-                    </p>
-                    {submittedAt ? <p>Submitted {submittedAt}</p> : null}
-                    {submittedReport.submittedBy ? (
-                      <p>Submitted by {submittedReport.submittedBy}</p>
-                    ) : null}
+              ) : null}
+
+              {draftReport ? (
+                <AbsenteesSection
+                  reportId={draftReport.id}
+                  companyId={workspace.company.id}
+                  weekStart={workspace.week.reportWeekStart}
+                  weekEnd={workspace.week.reportWeekEnd}
+                  activeCompanyMembers={workspace.activeCompanyMembers}
+                  absenteeRecords={workspace.absenteeRecords}
+                  canEdit
+                />
+              ) : readOnlyReport ? (
+                <>
+                  <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
+                    <h3 className="text-base font-semibold text-foreground">
+                      {statusCopy.title}
+                    </h3>
+                    <div className="grid gap-2 text-sm leading-6 text-muted-foreground">
+                      <p>
+                        Editing is disabled for this report.
+                      </p>
+                      {readOnlySubmittedAt ? (
+                        <p>Submitted {readOnlySubmittedAt}</p>
+                      ) : null}
+                      {readOnlyReport.submittedBy ? (
+                        <p>Submitted by {readOnlyReport.submittedBy}</p>
+                      ) : null}
+                    </div>
+                    <Button
+                      type="button"
+                      disabled
+                      className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+                    >
+                      {statusCopy.cta}
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    disabled
-                    className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-                  >
-                    Submitted
-                  </Button>
-                </div>
+
+                  <AbsenteesSection
+                    reportId={readOnlyReport.id}
+                    companyId={workspace.company.id}
+                    weekStart={workspace.week.reportWeekStart}
+                    weekEnd={workspace.week.reportWeekEnd}
+                    activeCompanyMembers={workspace.activeCompanyMembers}
+                    absenteeRecords={workspace.absenteeRecords}
+                    canEdit={false}
+                  />
+                </>
               ) : workspace.reportStatus === "not_started" ? (
                 <Button
                   type="button"

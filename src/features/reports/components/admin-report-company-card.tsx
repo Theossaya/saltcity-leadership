@@ -33,6 +33,12 @@ export function AdminReportCompanyCard({ row }: AdminReportCompanyCardProps) {
       </CardHeader>
       <CardContent className="grid gap-2 text-sm text-muted-foreground">
         <p>
+          Absentees:{" "}
+          <span className="font-medium text-foreground">
+            {row.absenteeCount}
+          </span>
+        </p>
+        <p>
           Submitted:{" "}
           <span className="font-medium text-foreground">
             {row.submittedAt ? formatSubmittedAt(row.submittedAt) : "Not submitted"}

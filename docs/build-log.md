@@ -150,3 +150,18 @@ The current-week draft submission flow was added without expanding into review o
 - Required all members to be accounted for before submission: `present_count + absent_count` must equal the current active company member count.
 - Locked editing after submission by showing the submitted state on `/reports` instead of the draft form.
 - Left absentee records, follow-up case creation, and admin review actions for later passes.
+
+## Day 5 Morning — Absentee records foundation
+
+The draft-only absentee record foundation was added without creating follow-up cases or expanding pastoral workflow:
+
+- Created `supabase/sql/008_absentee_record_grants.sql` with authenticated insert/delete grants and strict RLS policies for current `Africa/Lagos` week draft reports owned by active assigned company leaders or assistant leaders.
+- Added zod validation for absentee record creation/removal using the actual `absentee_records` columns, including `company_member_id`, `absence_date`, `reason`, and optional `reason_note`.
+- Added server actions for adding and removing absentee records from a current-week draft report while keeping report status and report counts untouched.
+- Updated the company leader reports workspace to show active company members for absentee selection, draft-only add/remove controls, and read-only absentee display after submission.
+- Tightened submission so locking a report now requires `absent_count` to match the linked absentee records before submission.
+- Kept Submit enabled for draft reports so visible form values can be saved and validated by the server action at submission time, instead of blocking on stale saved draft values.
+- Applied database-level absentee reconciliation for report submission through a new `supabase/sql/009_report_submit_absentee_reconciliation.sql` migration because `007_report_submit_grants.sql` may already be applied in existing environments.
+- Set the absentee form's default absence date from the most recent regular service day in the current reporting week.
+- Added absentee counts to the admin report overview cards.
+- Left follow-up case creation, admin review, notifications, and pastoral workflow for later passes.

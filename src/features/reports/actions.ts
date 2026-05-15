@@ -7,6 +7,10 @@ import { getCurrentUser } from "@/features/auth/get-current-user";
 import { getCurrentReportWeek } from "@/features/reports/queries";
 import { createClient } from "@/lib/supabase/server";
 import {
+  absenteeRecordCreateSchema,
+  absenteeRecordRemoveSchema,
+} from "@/lib/validation/absentees";
+import {
   createDraftWeeklyReportUpdateSchema,
   submitWeeklyReportSchema,
 } from "@/lib/validation/reports";
@@ -14,12 +18,17 @@ import {
 const START_DRAFT_ERROR_PATH = "/reports?error=unable-to-start-draft";
 const UPDATE_DRAFT_ERROR_PATH = "/reports?error=unable-to-update-draft";
 const SUBMIT_REPORT_ERROR_PATH = "/reports?error=unable-to-submit-report";
+const UPDATE_ABSENTEES_ERROR_PATH = "/reports?error=unable-to-update-absentees";
 
 type AssignedCompanyRow = {
   id: string;
 };
 
 type ExistingReportRow = {
+  id: string;
+};
+
+type ActiveCompanyMemberRow = {
   id: string;
 };
 
@@ -47,6 +56,10 @@ function canUpdateReportDraft(role: string | null) {
 }
 
 function canSubmitReport(role: string | null) {
+  return role === "company_leader" || role === "assistant_leader";
+}
+
+function canUpdateAbsentees(role: string | null) {
   return role === "company_leader" || role === "assistant_leader";
 }
 
@@ -285,29 +298,38 @@ export async function submitWeeklyReport(formData: FormData) {
     redirect(SUBMIT_REPORT_ERROR_PATH);
   }
 
-  const [{ data: report, error: reportError }, { count, error: countError }] =
-    await Promise.all([
-      supabase
-        .from("weekly_reports")
-        .select(
-          "id, company_id, church_id, report_week_start, report_week_end, status, total_members, present_count, absent_count",
-        )
-        .eq("church_id", churchId)
-        .eq("company_id", company.id)
-        .eq("id", reportId)
-        .eq("report_week_start", reportWeekStart)
-        .eq("report_week_end", reportWeekEnd)
-        .eq("status", "draft")
-        .maybeSingle<SubmittableDraftReportRow>(),
-      supabase
-        .from("company_members")
-        .select("id", { count: "exact", head: true })
-        .eq("church_id", churchId)
-        .eq("company_id", company.id)
-        .eq("status", "active"),
-    ]);
+  const [
+    { data: report, error: reportError },
+    { count, error: countError },
+    { count: absenteeRecordCount, error: absenteeRecordCountError },
+  ] = await Promise.all([
+    supabase
+      .from("weekly_reports")
+      .select(
+        "id, company_id, church_id, report_week_start, report_week_end, status, total_members, present_count, absent_count",
+      )
+      .eq("church_id", churchId)
+      .eq("company_id", company.id)
+      .eq("id", reportId)
+      .eq("report_week_start", reportWeekStart)
+      .eq("report_week_end", reportWeekEnd)
+      .eq("status", "draft")
+      .maybeSingle<SubmittableDraftReportRow>(),
+    supabase
+      .from("company_members")
+      .select("id", { count: "exact", head: true })
+      .eq("church_id", churchId)
+      .eq("company_id", company.id)
+      .eq("status", "active"),
+    supabase
+      .from("absentee_records")
+      .select("id", { count: "exact", head: true })
+      .eq("church_id", churchId)
+      .eq("company_id", company.id)
+      .eq("weekly_report_id", reportId),
+  ]);
 
-  if (reportError || countError || !report) {
+  if (reportError || countError || absenteeRecordCountError || !report) {
     redirect(SUBMIT_REPORT_ERROR_PATH);
   }
 
@@ -350,7 +372,8 @@ export async function submitWeeklyReport(formData: FormData) {
     report.status !== "draft" ||
     report.report_week_start !== reportWeekStart ||
     report.report_week_end !== reportWeekEnd ||
-    values.presentCount + values.absentCount !== totalMembers
+    values.presentCount + values.absentCount !== totalMembers ||
+    values.absentCount !== (absenteeRecordCount ?? 0)
   ) {
     redirect(SUBMIT_REPORT_ERROR_PATH);
   }
@@ -402,4 +425,175 @@ export async function submitWeeklyReport(formData: FormData) {
   revalidatePath("/reports");
   revalidatePath("/dashboard");
   redirect("/reports?submitted=report");
+}
+
+export async function addAbsenteeRecord(formData: FormData) {
+  const { user, primaryRole, churchId } = await getCurrentUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!canUpdateAbsentees(primaryRole) || !churchId) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const validation = absenteeRecordCreateSchema.safeParse({
+    reportId: formData.get("reportId"),
+    companyId: formData.get("companyId"),
+    companyMemberId: formData.get("companyMemberId"),
+    absenceDate: formData.get("absenceDate"),
+    reason: formData.get("reason"),
+    reasonNote: formData.get("reasonNote"),
+  });
+
+  if (!validation.success) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const values = validation.data;
+  const supabase = await createClient();
+  const { reportWeekStart, reportWeekEnd } = getCurrentReportWeek();
+
+  if (
+    values.absenceDate < reportWeekStart ||
+    values.absenceDate > reportWeekEnd
+  ) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id")
+    .eq("church_id", churchId)
+    .eq("id", values.companyId)
+    .or(`leader_id.eq.${user.id},assistant_leader_id.eq.${user.id}`)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle<AssignedCompanyRow>();
+
+  if (companyError || !company) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const [
+    { data: report, error: reportError },
+    { data: companyMember, error: companyMemberError },
+  ] = await Promise.all([
+    supabase
+      .from("weekly_reports")
+      .select("id, company_id, church_id, report_week_start, report_week_end, status")
+      .eq("church_id", churchId)
+      .eq("company_id", company.id)
+      .eq("id", values.reportId)
+      .eq("report_week_start", reportWeekStart)
+      .eq("report_week_end", reportWeekEnd)
+      .eq("status", "draft")
+      .maybeSingle<DraftReportRow>(),
+    supabase
+      .from("company_members")
+      .select("id")
+      .eq("church_id", churchId)
+      .eq("company_id", company.id)
+      .eq("id", values.companyMemberId)
+      .eq("status", "active")
+      .maybeSingle<ActiveCompanyMemberRow>(),
+  ]);
+
+  if (reportError || companyMemberError || !report || !companyMember) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const { error: insertError } = await supabase.from("absentee_records").insert({
+    church_id: churchId,
+    weekly_report_id: report.id,
+    company_id: company.id,
+    company_member_id: companyMember.id,
+    absence_date: values.absenceDate,
+    reason: values.reason,
+    reason_note: values.reasonNote ?? null,
+    streak_count: 1,
+    follow_up_required: false,
+  });
+
+  if (insertError) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/reports?updated=absentees");
+}
+
+export async function removeAbsenteeRecord(formData: FormData) {
+  const { user, primaryRole, churchId } = await getCurrentUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!canUpdateAbsentees(primaryRole) || !churchId) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const validation = absenteeRecordRemoveSchema.safeParse({
+    reportId: formData.get("reportId"),
+    companyId: formData.get("companyId"),
+    absenteeRecordId: formData.get("absenteeRecordId"),
+  });
+
+  if (!validation.success) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const values = validation.data;
+  const supabase = await createClient();
+  const { reportWeekStart, reportWeekEnd } = getCurrentReportWeek();
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id")
+    .eq("church_id", churchId)
+    .eq("id", values.companyId)
+    .or(`leader_id.eq.${user.id},assistant_leader_id.eq.${user.id}`)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle<AssignedCompanyRow>();
+
+  if (companyError || !company) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const { data: report, error: reportError } = await supabase
+    .from("weekly_reports")
+    .select("id, company_id, church_id, report_week_start, report_week_end, status")
+    .eq("church_id", churchId)
+    .eq("company_id", company.id)
+    .eq("id", values.reportId)
+    .eq("report_week_start", reportWeekStart)
+    .eq("report_week_end", reportWeekEnd)
+    .eq("status", "draft")
+    .maybeSingle<DraftReportRow>();
+
+  if (reportError || !report) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  const { error: deleteError } = await supabase
+    .from("absentee_records")
+    .delete()
+    .eq("church_id", churchId)
+    .eq("company_id", company.id)
+    .eq("weekly_report_id", report.id)
+    .eq("id", values.absenteeRecordId)
+    .select("id")
+    .single();
+
+  if (deleteError) {
+    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/reports?updated=absentees");
 }

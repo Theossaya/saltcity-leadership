@@ -43,12 +43,29 @@ export type WeeklyReportSummary = {
   testimonies: string | null;
 };
 
+export type CompanyMemberOption = {
+  id: string;
+  fullName: string;
+};
+
+export type AbsenteeRecordSummary = {
+  id: string;
+  companyMemberId: string;
+  companyMemberName: string;
+  absenceDate: string;
+  reason: string;
+  reasonNote: string | null;
+};
+
 export type CompanyReportWorkspace = {
   company: ReportCompany | null;
   week: ReportWeekRange;
   report: WeeklyReportSummary | null;
   reportStatus: ReportStatus;
   lastSubmittedReport: WeeklyReportSummary | null;
+  activeCompanyMembers: CompanyMemberOption[];
+  absenteeRecords: AbsenteeRecordSummary[];
+  absenteeCount: number;
 };
 
 export type AdminReportCompanyRow = {
@@ -57,6 +74,7 @@ export type AdminReportCompanyRow = {
   reportStatus: ReportStatus;
   submittedAt: string | null;
   submittedByName: string | null;
+  absenteeCount: number;
 };
 
 export type AdminReportsOverview = {
@@ -99,6 +117,20 @@ type WeeklyReportRow = {
   general_notes: string | null;
   support_needed: string | null;
   testimonies: string | null;
+};
+
+type CompanyMemberRow = {
+  id: string;
+  full_name: string;
+};
+
+type AbsenteeRecordRow = {
+  id: string;
+  weekly_report_id: string;
+  company_member_id: string;
+  absence_date: string;
+  reason: string;
+  reason_note: string | null;
 };
 
 const WEEKLY_REPORT_SUMMARY_SELECT =
@@ -161,6 +193,28 @@ function mapCompany(company: CompanyRow): ReportCompany {
     id: company.id,
     name: company.name,
     status: company.status,
+  };
+}
+
+function mapCompanyMember(member: CompanyMemberRow): CompanyMemberOption {
+  return {
+    id: member.id,
+    fullName: member.full_name,
+  };
+}
+
+function mapAbsenteeRecord(
+  absenteeRecord: AbsenteeRecordRow,
+  memberNames = new Map<string, string>(),
+): AbsenteeRecordSummary {
+  return {
+    id: absenteeRecord.id,
+    companyMemberId: absenteeRecord.company_member_id,
+    companyMemberName:
+      memberNames.get(absenteeRecord.company_member_id) || "Company member",
+    absenceDate: absenteeRecord.absence_date,
+    reason: absenteeRecord.reason,
+    reasonNote: absenteeRecord.reason_note,
   };
 }
 
@@ -238,6 +292,9 @@ export async function getCompanyReportWorkspace(
         report: null,
         reportStatus: "not_started",
         lastSubmittedReport: null,
+        activeCompanyMembers: [],
+        absenteeRecords: [],
+        absenteeCount: 0,
       },
       error: toErrorMessage("Unable to load assigned report company", companyError.message),
     };
@@ -251,13 +308,19 @@ export async function getCompanyReportWorkspace(
         report: null,
         reportStatus: "not_started",
         lastSubmittedReport: null,
+        activeCompanyMembers: [],
+        absenteeRecords: [],
+        absenteeCount: 0,
       },
       error: null,
     };
   }
 
-  const [{ data: currentReport, error: reportError }, { data: lastSubmitted }] =
-    await Promise.all([
+  const [
+    { data: currentReport, error: reportError },
+    { data: lastSubmitted },
+    { data: membersData, error: membersError },
+  ] = await Promise.all([
       supabase
         .from("weekly_reports")
         .select(WEEKLY_REPORT_SUMMARY_SELECT)
@@ -274,7 +337,43 @@ export async function getCompanyReportWorkspace(
         .order("submitted_at", { ascending: false, nullsFirst: false })
         .limit(1)
         .maybeSingle<WeeklyReportRow>(),
+      supabase
+        .from("company_members")
+        .select("id, full_name")
+        .eq("church_id", churchId)
+        .eq("company_id", company.id)
+        .eq("status", "active")
+        .order("full_name", { ascending: true })
+        .returns<CompanyMemberRow[]>(),
     ]);
+
+  const activeCompanyMembers = (membersData ?? []).map(mapCompanyMember);
+  let absenteeRecords: AbsenteeRecordSummary[] = [];
+  let absenteeError: string | null = null;
+
+  if (currentReport) {
+    const { data: absenteeData, error: absenteeRecordsError } = await supabase
+      .from("absentee_records")
+      .select(
+        "id, weekly_report_id, company_member_id, absence_date, reason, reason_note",
+      )
+      .eq("church_id", churchId)
+      .eq("company_id", company.id)
+      .eq("weekly_report_id", currentReport.id)
+      .order("created_at", { ascending: true })
+      .returns<AbsenteeRecordRow[]>();
+
+    const memberNames = new Map(
+      activeCompanyMembers.map((member) => [member.id, member.fullName]),
+    );
+
+    absenteeRecords = (absenteeData ?? []).map((absenteeRecord) =>
+      mapAbsenteeRecord(absenteeRecord, memberNames),
+    );
+    absenteeError = absenteeRecordsError
+      ? toErrorMessage("Unable to load absentee records", absenteeRecordsError.message)
+      : null;
+  }
 
   const submittedByIds = collectProfileIds([
     currentReport?.submitted_by ?? null,
@@ -285,6 +384,10 @@ export async function getCompanyReportWorkspace(
     reportError
       ? toErrorMessage("Unable to load current weekly report", reportError.message)
       : null,
+    membersError
+      ? toErrorMessage("Unable to load company members", membersError.message)
+      : null,
+    absenteeError,
     profileResult.error,
   ]
     .filter(Boolean)
@@ -299,6 +402,9 @@ export async function getCompanyReportWorkspace(
       lastSubmittedReport: lastSubmitted
         ? mapReport(lastSubmitted, profileResult.names)
         : null,
+      activeCompanyMembers,
+      absenteeRecords,
+      absenteeCount: absenteeRecords.length,
     },
     error: error || null,
   };
@@ -355,6 +461,32 @@ export async function getAdminReportsOverview(
     .returns<WeeklyReportRow[]>();
 
   const reports = reportsData ?? [];
+  const reportIds = reports.map((report) => report.id);
+  let absenteeCounts = new Map<string, number>();
+  let absenteeCountsError: string | null = null;
+
+  if (reportIds.length > 0) {
+    const { data: absenteeData, error: absenteeError } = await supabase
+      .from("absentee_records")
+      .select("id, weekly_report_id")
+      .eq("church_id", churchId)
+      .in("weekly_report_id", reportIds)
+      .returns<Array<{ id: string; weekly_report_id: string }>>();
+
+    absenteeCounts = new Map<string, number>();
+
+    for (const absenteeRecord of absenteeData ?? []) {
+      absenteeCounts.set(
+        absenteeRecord.weekly_report_id,
+        (absenteeCounts.get(absenteeRecord.weekly_report_id) ?? 0) + 1,
+      );
+    }
+
+    absenteeCountsError = absenteeError
+      ? toErrorMessage("Unable to load absentee counts", absenteeError.message)
+      : null;
+  }
+
   const profileResult = await getProfileNames(
     collectProfileIds([
       ...companies.map((company) => company.leader_id),
@@ -378,6 +510,7 @@ export async function getAdminReportsOverview(
       submittedByName: report?.submitted_by
         ? profileResult.names.get(report.submitted_by) || null
         : null,
+      absenteeCount: report ? absenteeCounts.get(report.id) ?? 0 : 0,
     };
   });
 
@@ -410,6 +543,7 @@ export async function getAdminReportsOverview(
         reportsError
           ? toErrorMessage("Unable to load current weekly reports", reportsError.message)
           : null,
+        absenteeCountsError,
         profileResult.error,
       ]
         .filter(Boolean)
