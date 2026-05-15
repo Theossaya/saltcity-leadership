@@ -38,10 +38,10 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/90 bg-card/95 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 shadow-[0_-12px_30px_rgba(21,18,23,0.08)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-card/92 px-3 pb-[calc(env(safe-area-inset-bottom)+0.55rem)] pt-2 shadow-[0_-12px_30px_rgba(21,18,23,0.07)] backdrop-blur-md md:hidden"
       aria-label="Primary"
     >
-      <div className="mx-auto grid max-w-3xl grid-cols-5 gap-1">
+      <div className="mx-auto grid max-w-3xl grid-cols-5 gap-1.5">
         {MAIN_NAVIGATION_ITEMS.map((item) => {
           const href = getNavHref(item);
           const active = isActive(item.label, href, pathname);
@@ -52,10 +52,10 @@ export function BottomNav() {
               key={item.href}
               href={href}
               className={cn(
-                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-1 text-[0.68rem] font-medium text-muted-foreground transition-colors",
+                "flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-lg border border-transparent px-1 text-[0.66rem] font-medium text-muted-foreground transition-colors",
                 active
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted hover:text-foreground",
+                  ? "border-primary/15 bg-[#F1EAF2] text-primary shadow-[0_8px_18px_rgba(36,17,38,0.08)]"
+                  : "hover:bg-muted/80 hover:text-foreground",
               )}
               aria-current={active ? "page" : undefined}
             >

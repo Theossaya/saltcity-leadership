@@ -24,10 +24,13 @@ export function formatReportWeek(week: ReportWeekRange) {
 
 export function ReportWeekCard({ week }: ReportWeekCardProps) {
   return (
-    <Card className="rounded-lg border-border/80 bg-[#FBFAF8] shadow-sm" size="sm">
+    <Card
+      className="rounded-lg border-primary/15 bg-[#FBFAF8] shadow-[0_8px_22px_rgba(21,18,23,0.045)]"
+      size="sm"
+    >
       <CardContent className="flex items-center gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#241126] text-white">
-          <CalendarDays className="size-5" aria-hidden="true" />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#241126] text-white shadow-[0_8px_18px_rgba(36,17,38,0.12)]">
+          <CalendarDays className="size-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">

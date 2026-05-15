@@ -42,14 +42,14 @@ function getFollowUpStatusLabel(status: string) {
 
 export function TaskCard({ task }: TaskCardProps) {
   return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-      <CardHeader className="gap-3">
+    <Card className="rounded-lg border-border/80 bg-card shadow-[0_10px_28px_rgba(21,18,23,0.045)]">
+      <CardHeader className="gap-3 pb-2">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
               {task.companyName ?? "Leadership task"}
             </p>
-            <CardTitle className="mt-1 text-xl font-semibold">
+            <CardTitle className="mt-1 text-lg font-semibold">
               {task.title}
             </CardTitle>
           </div>
@@ -66,7 +66,7 @@ export function TaskCard({ task }: TaskCardProps) {
       </CardHeader>
 
       <CardContent className="grid gap-4">
-        <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4 sm:grid-cols-3">
+        <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-3 sm:grid-cols-3 sm:p-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
               Assigned to
@@ -118,7 +118,7 @@ export function TaskCard({ task }: TaskCardProps) {
         </div>
 
         {task.description ? (
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="rounded-lg border border-border/80 bg-white px-4 py-3 text-sm leading-6 text-muted-foreground">
             {task.description}
           </p>
         ) : null}

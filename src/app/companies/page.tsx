@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/ui/page-header";
+import { QueryNotice } from "@/components/ui/query-notice";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import { CompanyCard } from "@/features/companies/components/company-card";
 import { CompanyEmptyState } from "@/features/companies/components/company-empty-state";
@@ -10,14 +12,6 @@ import {
   getAssignedCompanyDetails,
   getCompanyMembers,
 } from "@/features/companies/queries";
-
-function QueryNotice({ message }: { message: string }) {
-  return (
-    <div className="rounded-lg border border-border/80 bg-[#FBFAF8] px-4 py-3 text-sm leading-6 text-muted-foreground">
-      {message}
-    </div>
-  );
-}
 
 export default async function CompaniesPage() {
   const { user, profile, primaryRole, churchId, church } = await getCurrentUser();
@@ -98,7 +92,7 @@ export default async function CompaniesPage() {
           <div className="grid gap-1">
             <h2 className="text-xl font-semibold text-foreground">Members</h2>
             <p className="text-sm leading-6 text-muted-foreground">
-              Read-only company member visibility for weekly reporting.
+              Read-only member visibility for weekly reporting.
             </p>
           </div>
 
@@ -130,16 +124,14 @@ export default async function CompaniesPage() {
       role={primaryRole}
       churchName={church?.name}
     >
-      <section className="grid gap-2">
-        <h1 className="text-3xl font-semibold text-foreground">
-          {isCompanyLeader ? "My Company" : "Companies"}
-        </h1>
-        <p className="text-sm leading-6 text-muted-foreground">
-          {isCompanyLeader
-            ? "Assigned company structure and member visibility."
-            : "Company structure and leadership visibility."}
-        </p>
-      </section>
+      <PageHeader
+        title={isCompanyLeader ? "My Company" : "Companies"}
+        subtitle={
+          isCompanyLeader
+            ? "Assigned company structure and member visibility for reporting."
+            : "Company structure, leadership assignments, and member counts."
+        }
+      />
 
       {content}
     </AppShell>

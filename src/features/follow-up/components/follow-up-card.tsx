@@ -48,14 +48,14 @@ function getFollowUpStatusLabel(status: FollowUpStatus) {
 
 export function FollowUpCard({ item }: FollowUpCardProps) {
   return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-      <CardHeader className="gap-3">
+    <Card className="rounded-lg border-primary/15 bg-card shadow-[0_10px_28px_rgba(21,18,23,0.05)]">
+      <CardHeader className="gap-3 pb-2">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+            <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
               {item.companyName}
             </p>
-            <CardTitle className="mt-1 text-xl font-semibold">
+            <CardTitle className="mt-1 text-lg font-semibold">
               {item.memberName}
             </CardTitle>
           </div>
@@ -72,7 +72,7 @@ export function FollowUpCard({ item }: FollowUpCardProps) {
       </CardHeader>
 
       <CardContent className="grid gap-4">
-        <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4 sm:grid-cols-3">
+        <div className="grid gap-3 rounded-lg border border-primary/15 bg-[#F6F1EB] p-3 sm:grid-cols-3 sm:p-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
               Absence date
@@ -122,8 +122,8 @@ export function FollowUpCard({ item }: FollowUpCardProps) {
 
         {item.reasonNote ? (
           <div className="rounded-lg border border-border/80 bg-white px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-              Note
+            <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
+              Leader note
             </p>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {item.reasonNote}

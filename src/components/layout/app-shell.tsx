@@ -20,7 +20,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader displayName={displayName} role={role} churchName={churchName} />
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-5 pb-28 sm:py-7 md:pb-10">
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+9rem)] sm:gap-5 sm:px-5 sm:pt-6 md:pb-12">
         {children}
       </main>
       <BottomNav />

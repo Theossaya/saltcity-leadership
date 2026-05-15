@@ -10,6 +10,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MetricCard } from "@/components/ui/metric-card";
+import { PageHeader } from "@/components/ui/page-header";
+import { QueryNotice } from "@/components/ui/query-notice";
 import { Textarea } from "@/components/ui/textarea";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import {
@@ -32,14 +35,6 @@ import {
   type ReportStatus,
 } from "@/features/reports/queries";
 import { ABSENCE_REASON_LABELS, ABSENCE_REASONS } from "@/lib/constants/statuses";
-
-function QueryNotice({ message }: { message: string }) {
-  return (
-    <div className="rounded-lg border border-border/80 bg-[#FBFAF8] px-4 py-3 text-sm leading-6 text-muted-foreground">
-      {message}
-    </div>
-  );
-}
 
 function getCompanyStatusCopy(status: ReportStatus) {
   switch (status) {
@@ -70,19 +65,6 @@ function getCompanyStatusCopy(status: ReportStatus) {
         cta: "Start report",
       };
   }
-}
-
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm" size="sm">
-      <CardContent>
-        <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-          {label}
-        </p>
-        <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
-      </CardContent>
-    </Card>
-  );
 }
 
 type ReportsPageProps = {
@@ -192,7 +174,7 @@ function AbsenteeRecordsList({
 }) {
   if (absenteeRecords.length === 0) {
     return (
-      <div className="rounded-lg border border-border/80 bg-white px-4 py-3 text-sm text-muted-foreground">
+      <div className="rounded-lg border border-dashed border-primary/20 bg-white px-4 py-3 text-sm text-muted-foreground shadow-xs">
         No absentee records added yet.
       </div>
     );
@@ -203,7 +185,7 @@ function AbsenteeRecordsList({
       {absenteeRecords.map((absenteeRecord) => (
         <div
           key={absenteeRecord.id}
-          className="grid gap-3 rounded-lg border border-border/80 bg-white p-4 sm:grid-cols-[1fr_auto] sm:items-start"
+          className="grid gap-3 rounded-lg border border-border/80 bg-white p-3 shadow-xs sm:grid-cols-[1fr_auto] sm:items-start sm:p-4"
         >
           <div className="min-w-0">
             <p className="font-medium text-foreground">
@@ -272,14 +254,14 @@ function AbsenteesSection({
   const defaultAbsenceDate = getDefaultAbsenceDate(weekStart, weekEnd);
 
   return (
-    <section className="grid gap-4 rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
+    <section className="grid gap-4 rounded-lg border border-primary/15 bg-[#FBFAF8] p-4 shadow-[0_10px_28px_rgba(21,18,23,0.05)]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-foreground">
-            Absentees
+            Absentee records
           </h3>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {absenteeRecords.length} recorded for this report.
+            {absenteeRecords.length} recorded. Keep this list gentle and accurate.
           </p>
         </div>
       </div>
@@ -355,13 +337,15 @@ function AbsenteesSection({
             </div>
           </div>
 
-          <Button
-            type="submit"
-            className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-            disabled={selectableMembers.length === 0}
-          >
-            Add absentee
-          </Button>
+          <div className="border-t border-border/80 pt-1">
+            <Button
+              type="submit"
+              className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+              disabled={selectableMembers.length === 0}
+            >
+              Add absentee
+            </Button>
+          </div>
         </form>
       ) : null}
 
@@ -453,19 +437,19 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
         <ReportWeekCard week={overview.week} />
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <SummaryCard
+        <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-5">
+          <MetricCard
             label="Total companies"
             value={overview.summary.totalCompanies}
           />
-          <SummaryCard label="Submitted" value={overview.summary.submittedReports} />
-          <SummaryCard label="Missing" value={overview.summary.missingReports} />
-          <SummaryCard label="Draft" value={overview.summary.draftReports} />
-          <SummaryCard label="Flagged" value={overview.summary.flaggedReports} />
+          <MetricCard label="Submitted" value={overview.summary.submittedReports} />
+          <MetricCard label="Missing" value={overview.summary.missingReports} />
+          <MetricCard label="Draft" value={overview.summary.draftReports} />
+          <MetricCard label="Flagged" value={overview.summary.flaggedReports} />
         </section>
 
         {overview.rows.length > 0 ? (
-          <section className="grid gap-3">
+          <section className="grid gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/45 p-3">
             {overview.rows.map((row) => (
               <AdminReportCompanyCard key={row.company.id} row={row} />
             ))}
@@ -561,8 +545,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         <ReportWeekCard week={workspace.week} />
 
         {workspace.company ? (
-          <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-            <CardHeader className="gap-3">
+          <Card className="rounded-lg border-primary/15 bg-card shadow-[0_14px_36px_rgba(21,18,23,0.06)]">
+            <CardHeader className="gap-3 pb-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
@@ -576,14 +560,16 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               </div>
             </CardHeader>
             <CardContent className="grid gap-4">
-              <div className="rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
-                <h2 className="text-base font-semibold text-foreground">
-                  {statusCopy.title}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {reportCardBody}
-                </p>
-              </div>
+              {readOnlyReport ? null : (
+                <div className="rounded-lg border border-primary/15 bg-[#FBFAF8] p-4">
+                  <h2 className="text-base font-semibold text-foreground">
+                    {statusCopy.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    {reportCardBody}
+                  </p>
+                </div>
+              )}
 
               {canStartDisplayedReport ? (
                 <form action={startWeeklyReportDraft}>
@@ -612,7 +598,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     value={workspace.company.id}
                   />
 
-                  <div className="rounded-lg border border-border/80 bg-[#FBFAF8] px-4 py-3">
+                  <div className="rounded-lg border border-primary/15 bg-[#FBFAF8] px-4 py-3 shadow-xs">
                     <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                       Total members
                     </p>
@@ -621,7 +607,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     </p>
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 rounded-lg border border-border/80 bg-white p-4 shadow-xs sm:grid-cols-3">
                     <div className="grid gap-2">
                       <Label htmlFor="presentCount">Present count</Label>
                       <Input
@@ -669,7 +655,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     </div>
                   </div>
 
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 rounded-lg border border-border/80 bg-white p-4 shadow-xs">
                     <div className="grid gap-2">
                       <Label htmlFor="generalNotes">General notes</Label>
                       <Textarea
@@ -702,7 +688,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
+                  <div className="grid gap-3 rounded-lg border border-primary/15 bg-[#FBFAF8] p-4 shadow-sm">
                     <div>
                       <h3 className="text-base font-semibold text-foreground">
                         Submit report
@@ -729,7 +715,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                       </div>
                     ) : null}
 
-                    <div className="flex flex-col gap-3 sm:flex-row">
+                    <div className="flex flex-col gap-3 border-t border-border/80 pt-1 sm:flex-row">
                       <Button
                         type="submit"
                         className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
@@ -760,14 +746,17 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                 />
               ) : readOnlyReport ? (
                 <>
-                  <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4">
-                    <h3 className="text-base font-semibold text-foreground">
-                      {statusCopy.title}
-                    </h3>
-                    <div className="grid gap-2 text-sm leading-6 text-muted-foreground">
-                      <p>
-                        Editing is disabled for this report.
+                  <div className="grid gap-4 rounded-lg border border-primary/15 bg-[#F1ECE6] p-4 shadow-[0_10px_28px_rgba(21,18,23,0.05)]">
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-primary/75">
+                        Read-only report
                       </p>
+                      <h3 className="mt-1 text-base font-semibold text-foreground">
+                        {statusCopy.title}
+                      </h3>
+                    </div>
+                    <div className="grid gap-2 rounded-lg border border-primary/10 bg-[#FBFAF8]/80 p-3 text-sm leading-6 text-muted-foreground">
+                      <p>Editing is disabled for this report.</p>
                       {readOnlySubmittedAt ? (
                         <p>Submitted {readOnlySubmittedAt}</p>
                       ) : null}
@@ -775,13 +764,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                         <p>Submitted by {readOnlyReport.submittedBy}</p>
                       ) : null}
                     </div>
-                    <Button
-                      type="button"
-                      disabled
-                      className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-                    >
-                      {statusCopy.cta}
-                    </Button>
                   </div>
 
                   <AbsenteesSection
@@ -831,10 +813,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       role={primaryRole}
       churchName={church?.name}
     >
-      <section className="grid gap-2">
-        <h1 className="text-3xl font-semibold text-foreground">{title}</h1>
-        <p className="text-sm leading-6 text-muted-foreground">{subtitle}</p>
-      </section>
+      <PageHeader title={title} subtitle={subtitle} />
 
       {content}
     </AppShell>

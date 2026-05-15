@@ -41,20 +41,20 @@ export function CompanyCard({
   return (
     <Card
       className={cn(
-        "rounded-lg border-border/80 bg-[#FBFAF8] shadow-sm",
+        "rounded-lg border-border/80 bg-card shadow-[0_10px_28px_rgba(21,18,23,0.045)]",
         emphasis ? "border-primary/25 shadow-[0_14px_36px_rgba(36,17,38,0.08)]" : null,
       )}
     >
-      <CardHeader className="gap-2">
+      <CardHeader className="gap-2 pb-1">
         <div className="flex items-start justify-between gap-3">
-          <CardTitle className="text-xl font-semibold text-foreground">
+          <CardTitle className="text-lg font-semibold text-foreground">
             {company.name}
           </CardTitle>
           <StatusBadge status={company.status} />
         </div>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div className="grid gap-3 text-sm">
+        <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-3 text-sm sm:grid-cols-2">
           <div className="grid gap-1">
             <p className="text-xs font-semibold text-muted-foreground uppercase">
               Leader
@@ -74,7 +74,7 @@ export function CompanyCard({
         </div>
 
         {typeof memberCount === "number" ? (
-          <div className="rounded-md border border-border/80 bg-white px-3 py-3">
+          <div className="rounded-lg border border-primary/15 bg-white px-3 py-3 shadow-xs">
             <p className="text-xs font-semibold text-muted-foreground uppercase">
               Members
             </p>

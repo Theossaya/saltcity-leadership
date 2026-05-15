@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import { formatRole } from "@/lib/utils/format-role";
 
@@ -24,31 +25,31 @@ type SupportingCard = {
 const adminCards: SupportingCard[] = [
   {
     title: "Companies overview",
-    text: "Company structure and leadership visibility are now available.",
+    text: "Review company assignments, leaders, and current member counts.",
     href: "/companies",
     linkLabel: "Open companies",
   },
   {
     title: "Pending reports",
-    text: "Submitted and missing report visibility is available in Reports.",
+    text: "See which companies have submitted and which still need attention.",
     href: "/reports",
     linkLabel: "Open reports",
   },
   {
     title: "Follow-up queue",
-    text: "Absentee follow-up visibility is available in Follow-up.",
+    text: "Scan absentee records that need a careful leadership response.",
     href: "/follow-up",
     linkLabel: "Open follow-up",
   },
   {
     title: "Assigned tasks",
-    text: "Church-wide task visibility is available in Tasks.",
+    text: "Track visible leadership assignments and their current status.",
     href: "/tasks",
     linkLabel: "Open tasks",
   },
   {
     title: "Announcements",
-    text: "Leadership announcements are available in Announcements.",
+    text: "Check active leadership notices and urgent updates.",
     href: "/announcements",
     linkLabel: "Open announcements",
   },
@@ -57,13 +58,13 @@ const adminCards: SupportingCard[] = [
 const generalLeaderCards: SupportingCard[] = [
   {
     title: "Announcements",
-    text: "Leadership announcements are available in Announcements.",
+    text: "Check active leadership notices and urgent updates.",
     href: "/announcements",
     linkLabel: "Open announcements",
   },
   {
     title: "Assigned tasks",
-    text: "Assigned leadership tasks are available in Tasks.",
+    text: "Review assignments that have been shared with you.",
     href: "/tasks",
     linkLabel: "Open tasks",
   },
@@ -86,19 +87,22 @@ export default async function DashboardPage() {
   const attention = isAdmin
     ? {
         title: "Leadership status",
-        text: "Review reports, follow-up cases, and assignments from one place.",
-        action: "Review dashboard",
+        text: "Start with reports, follow-up, and open assignments before reviewing the wider company structure.",
+        action: "Open reports",
+        href: "/reports",
       }
     : isCompanyLeader
       ? {
           title: "This week's company report",
-          text: "Prepare attendance, absentees, and follow-up notes for your company.",
+          text: "Prepare attendance, absentees, and follow-up notes for your company before submission.",
           action: "Open report",
+          href: "/reports",
         }
       : {
           title: "Leadership updates",
           text: "Announcements, tasks, and event responsibilities will appear here.",
           action: null,
+          href: null,
         };
 
   const supportingCards = isAdmin
@@ -108,32 +112,32 @@ export default async function DashboardPage() {
           {
             title: "My company",
             text: assignedCompany
-              ? `${assignedCompany.name} is ready in your company view.`
+              ? `${assignedCompany.name} is ready for member visibility.`
               : "Your assigned company will appear after admin assignment.",
             href: "/companies",
             linkLabel: "Open my company",
           },
           {
             title: "Report status",
-            text: "Your weekly report workspace is available from Reports.",
+            text: "Open your weekly workspace for counts, notes, and absentees.",
             href: "/reports",
             linkLabel: "Open reports",
           },
           {
             title: "Follow-up attention",
-            text: "Absentee follow-up visibility is available in Follow-up.",
+            text: "Review absentee records that may need personal follow-up.",
             href: "/follow-up",
             linkLabel: "Open follow-up",
           },
           {
             title: "Assigned tasks",
-            text: "Assigned tasks are available in Tasks.",
+            text: "Check assignments that need action or monitoring.",
             href: "/tasks",
             linkLabel: "Open tasks",
           },
           {
             title: "Announcements",
-            text: "Leadership updates and notices are available in Announcements.",
+            text: "Read active leadership notices and urgent updates.",
             href: "/announcements",
             linkLabel: "Open announcements",
           },
@@ -146,15 +150,12 @@ export default async function DashboardPage() {
       role={primaryRole}
       churchName={church?.name}
     >
-      <section className="grid gap-3">
-        <p className="text-sm font-medium text-muted-foreground">
-          Welcome, {displayName}
-        </p>
-        <div className="grid gap-2">
-          <h1 className="text-3xl font-semibold text-foreground">
-            What needs attention?
-          </h1>
-          <div className="flex flex-wrap gap-2">
+      <PageHeader
+        eyebrow={`Welcome, ${displayName}`}
+        title="What needs attention?"
+        subtitle="A focused view of the reporting, follow-up, and leadership work that needs a calm next step."
+        meta={
+          <>
             <Badge className="bg-primary text-primary-foreground">
               {formatRole(primaryRole)}
             </Badge>
@@ -162,21 +163,22 @@ export default async function DashboardPage() {
             {isCompanyLeader && assignedCompany ? (
               <Badge variant="secondary">{assignedCompany.name}</Badge>
             ) : null}
-          </div>
-        </div>
-      </section>
+          </>
+        }
+      />
 
-      <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-        <CardHeader className="gap-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase">
+      <Card className="relative rounded-lg border-primary/15 bg-[#F1ECE6] shadow-[0_18px_46px_rgba(36,17,38,0.1)]">
+        <div className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-primary/55" />
+        <CardHeader className="gap-2 pb-2">
+          <p className="text-xs font-semibold text-primary/75 uppercase">
             Primary attention
           </p>
-          <CardTitle className="text-2xl font-semibold">
+          <CardTitle className="text-xl font-semibold sm:text-2xl">
             {attention.title}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="grid gap-2">
+          <div className="grid gap-2 rounded-lg border border-primary/10 bg-[#FBFAF8]/75 p-4">
             <p className="text-sm leading-6 text-muted-foreground">
               {attention.text}
             </p>
@@ -188,29 +190,31 @@ export default async function DashboardPage() {
               </p>
             ) : null}
           </div>
-          {attention.action ? (
+          {attention.action && attention.href ? (
             <Button
-              type="button"
-              disabled
+              asChild
               className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
             >
-              {attention.action}
+              <Link href={attention.href}>
+                {attention.action}
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
             </Button>
           ) : null}
         </CardContent>
       </Card>
 
-      <section className="grid gap-3">
+      <section className="grid gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-2 sm:p-4">
         {supportingCards.map((card) => (
           <Card
             key={card.title}
-            className="rounded-lg border-border/80 bg-card shadow-sm"
+            className="rounded-lg border-border/80 bg-[#FBFAF8] shadow-[0_8px_22px_rgba(21,18,23,0.04)]"
             size="sm"
           >
-            <CardHeader>
-              <CardTitle>{card.title}</CardTitle>
+            <CardHeader className="pb-1">
+              <CardTitle className="text-base">{card.title}</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="grid gap-3">
               <p className="text-sm leading-6 text-muted-foreground">
                 {card.text}
               </p>

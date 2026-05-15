@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { MetricCard } from "@/components/ui/metric-card";
 
 type TaskSummaryCardProps = {
   label: string;
@@ -6,14 +6,5 @@ type TaskSummaryCardProps = {
 };
 
 export function TaskSummaryCard({ label, value }: TaskSummaryCardProps) {
-  return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm" size="sm">
-      <CardContent>
-        <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-          {label}
-        </p>
-        <p className="mt-2 text-2xl font-semibold text-foreground">{value}</p>
-      </CardContent>
-    </Card>
-  );
+  return <MetricCard label={label} value={value} />;
 }

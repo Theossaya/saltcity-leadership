@@ -195,3 +195,22 @@ The read-only announcements foundation was added without schema changes or write
 - Updated the More page so Announcements links to `/announcements`.
 - Updated dashboard announcement links for admins and leaders.
 - Left announcement creation, editing, notifications, read receipts, and all announcement writes for later passes.
+
+## Day 7 — UI refinement pass 1
+
+The first UI refinement pass improved the existing leadership app surfaces without changing product logic:
+
+- Refined the AppShell, app header, and bottom navigation for tighter mobile rhythm, clearer identity, and more app-like navigation.
+- Improved dashboard hierarchy around the "What needs attention?" flow with a stronger primary attention card and denser supporting cards.
+- Added small reusable UI helpers for page headers, metric cards, empty states, and query notices to improve visual consistency.
+- Tightened card, list, summary, and form presentation across Companies, Reports, Follow-up, Tasks, Announcements, and More.
+- Kept the pass visual only: no business logic, SQL, RLS, schema, authentication, or write-action changes.
+
+## Day 7 — UI refinement pass 1B
+
+The second UI refinement pass stayed within UI and layout only:
+
+- Fixed bottom navigation content overlap by increasing the AppShell mobile bottom safe-area padding.
+- Removed the duplicate submitted report state so submitted/read-only reports show one clear locked state, followed by absentee records.
+- Improved visual hierarchy and identity with stronger dashboard attention treatment, inset metric bands, more deliberate empty states, lighter bottom navigation, and refined card borders/shadows.
+- Kept the pass visual only: no business logic, SQL, RLS, schema, authentication, query logic, permissions, or server-action changes.

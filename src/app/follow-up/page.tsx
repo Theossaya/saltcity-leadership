@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { QueryNotice } from "@/components/ui/query-notice";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import { FollowUpCard } from "@/features/follow-up/components/follow-up-card";
 import { FollowUpEmptyState } from "@/features/follow-up/components/follow-up-empty-state";
@@ -11,14 +13,6 @@ import {
   getCompanyFollowUpQueue,
   type FollowUpQueue,
 } from "@/features/follow-up/queries";
-
-function QueryNotice({ message }: { message: string }) {
-  return (
-    <div className="rounded-lg border border-border/80 bg-[#FBFAF8] px-4 py-3 text-sm leading-6 text-muted-foreground">
-      {message}
-    </div>
-  );
-}
 
 function RestrictedState() {
   return (
@@ -95,7 +89,7 @@ export default async function FollowUpPage() {
       <>
         {queueResult.error ? <QueryNotice message={queueResult.error} /> : null}
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-4">
           <FollowUpSummaryCard
             label="Total items"
             value={queue.summary.totalItems}
@@ -128,7 +122,7 @@ export default async function FollowUpPage() {
       <>
         {queueResult.error ? <QueryNotice message={queueResult.error} /> : null}
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-3">
           <FollowUpSummaryCard
             label="Total items"
             value={queue.summary.totalItems}
@@ -154,10 +148,7 @@ export default async function FollowUpPage() {
       role={primaryRole}
       churchName={church?.name}
     >
-      <section className="grid gap-2">
-        <h1 className="text-3xl font-semibold text-foreground">{title}</h1>
-        <p className="text-sm leading-6 text-muted-foreground">{subtitle}</p>
-      </section>
+      <PageHeader title={title} subtitle={subtitle} />
 
       {content}
     </AppShell>

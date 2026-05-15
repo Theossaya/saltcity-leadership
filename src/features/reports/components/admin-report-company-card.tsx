@@ -17,8 +17,11 @@ function formatSubmittedAt(value: string) {
 
 export function AdminReportCompanyCard({ row }: AdminReportCompanyCardProps) {
   return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm" size="sm">
-      <CardHeader className="gap-3">
+    <Card
+      className="rounded-lg border-border/80 bg-card shadow-[0_10px_28px_rgba(21,18,23,0.045)]"
+      size="sm"
+    >
+      <CardHeader className="gap-3 pb-1">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <CardTitle className="truncate text-base font-semibold">
@@ -31,25 +34,27 @@ export function AdminReportCompanyCard({ row }: AdminReportCompanyCardProps) {
           <ReportStatusBadge status={row.reportStatus} />
         </div>
       </CardHeader>
-      <CardContent className="grid gap-2 text-sm text-muted-foreground">
-        <p>
-          Absentees:{" "}
-          <span className="font-medium text-foreground">
-            {row.absenteeCount}
-          </span>
-        </p>
-        <p>
-          Submitted:{" "}
-          <span className="font-medium text-foreground">
-            {row.submittedAt ? formatSubmittedAt(row.submittedAt) : "Not submitted"}
-          </span>
-        </p>
-        <p>
-          Submitted by:{" "}
-          <span className="font-medium text-foreground">
-            {row.submittedByName || "No submission on record"}
-          </span>
-        </p>
+      <CardContent className="grid gap-2 rounded-lg text-sm text-muted-foreground">
+        <div className="grid gap-2 rounded-lg border border-border/80 bg-[#FBFAF8] p-3 sm:grid-cols-3">
+          <p>
+            Absentees{" "}
+            <span className="block font-medium text-foreground">
+              {row.absenteeCount}
+            </span>
+          </p>
+          <p>
+            Submitted{" "}
+            <span className="block font-medium text-foreground">
+              {row.submittedAt ? formatSubmittedAt(row.submittedAt) : "Not submitted"}
+            </span>
+          </p>
+          <p>
+            Submitted by{" "}
+            <span className="block font-medium text-foreground">
+              {row.submittedByName || "No submission"}
+            </span>
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
