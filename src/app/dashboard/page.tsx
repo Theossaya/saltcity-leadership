@@ -36,7 +36,9 @@ const adminCards: SupportingCard[] = [
   },
   {
     title: "Follow-up queue",
-    text: "Open absentee and pastoral follow-up cases will appear here.",
+    text: "Absentee follow-up visibility is available in Follow-up.",
+    href: "/follow-up",
+    linkLabel: "Open follow-up",
   },
 ];
 
@@ -103,7 +105,9 @@ export default async function DashboardPage() {
           },
           {
             title: "Follow-up attention",
-            text: "Absentees needing care will appear here after reports are added.",
+            text: "Absentee follow-up visibility is available in Follow-up.",
+            href: "/follow-up",
+            linkLabel: "Open follow-up",
           },
         ]
       : generalLeaderCards;

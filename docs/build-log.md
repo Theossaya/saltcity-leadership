@@ -165,3 +165,13 @@ The draft-only absentee record foundation was added without creating follow-up c
 - Set the absentee form's default absence date from the most recent regular service day in the current reporting week.
 - Added absentee counts to the admin report overview cards.
 - Left follow-up case creation, admin review, notifications, and pastoral workflow for later passes.
+
+## Day 5 Afternoon — Follow-up queue foundation
+
+The read-only follow-up queue foundation was added without schema changes or write actions:
+
+- Created a role-aware follow-up queue from existing absentee records, recent weekly reports, companies, company members, and already-linked follow-up cases when present.
+- Added admin visibility across church companies and company leader visibility limited to assigned companies.
+- Replaced the Follow-up placeholder with mobile-friendly summary cards and sensitive absentee follow-up cards.
+- Updated dashboard follow-up cards to point to `/follow-up`.
+- Left follow-up case creation, marking contacted, assignment workflow, admin review, notifications, and all write actions for later passes.
