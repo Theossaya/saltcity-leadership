@@ -15,14 +15,6 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-function trimMessage(message: string) {
-  if (message.length <= 220) {
-    return message;
-  }
-
-  return `${message.slice(0, 217).trim()}...`;
-}
-
 export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
   return (
     <Card className="rounded-lg border-border/80 bg-card shadow-sm">
@@ -57,8 +49,8 @@ export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
       </CardHeader>
 
       <CardContent className="grid gap-4">
-        <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
-          {trimMessage(announcement.message)}
+        <p className="border-l-2 border-border/80 pl-4 text-sm leading-6 whitespace-pre-wrap text-muted-foreground break-words">
+          {announcement.message}
         </p>
 
         <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-4 sm:grid-cols-3">
