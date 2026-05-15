@@ -214,3 +214,17 @@ The second UI refinement pass stayed within UI and layout only:
 - Removed the duplicate submitted report state so submitted/read-only reports show one clear locked state, followed by absentee records.
 - Improved visual hierarchy and identity with stronger dashboard attention treatment, inset metric bands, more deliberate empty states, lighter bottom navigation, and refined card borders/shadows.
 - Kept the pass visual only: no business logic, SQL, RLS, schema, authentication, query logic, permissions, or server-action changes.
+
+## Day 8 Morning — Events foundation
+
+The read-only events foundation was added using the existing `public.events` schema:
+
+- Created RLS-respecting event query helpers for church admin overview and active leader visibility.
+- Filtered event reads to a current/upcoming window before applying the 50-row limit, avoiding old historical rows crowding out upcoming events.
+- Added a protected `/events` page with mobile-friendly event cards, summary cards, and the regular Sunday, Wednesday, and Friday service schedule.
+- Showed the known regular service cadence: Sunday 9:00-13:00, Wednesday 17:00-19:30, and Friday 17:00-19:30.
+- Updated the More page so Events opens `/events`.
+- Added `/events` to middleware route protection.
+- Added light dashboard links to `/events` without adding dashboard event queries.
+- Confirmed an events schema exists in `supabase/sql/001_initial_schema.sql`, with RLS policies and authenticated select grants already present in `002_rls_policies.sql` and `004_api_grants.sql`.
+- Left event creation, editing, attendance marking, notifications, special programme management, and all event write actions out of scope.

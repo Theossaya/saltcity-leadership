@@ -18,7 +18,7 @@ import { getCurrentUser } from "@/features/auth/get-current-user";
 const futureSections = [
   { label: "Companies", href: "/companies", icon: Building2 },
   { label: "Announcements", href: "/announcements", icon: Megaphone },
-  { label: "Events", href: "#", icon: CalendarDays },
+  { label: "Events", href: "/events", icon: CalendarDays },
   { label: "Documents", href: "#", icon: FileArchive },
   { label: "Units", href: "#", icon: UsersRound },
   { label: "Settings", href: "#", icon: Settings },

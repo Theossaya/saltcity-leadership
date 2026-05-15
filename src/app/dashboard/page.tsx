@@ -53,6 +53,12 @@ const adminCards: SupportingCard[] = [
     href: "/announcements",
     linkLabel: "Open announcements",
   },
+  {
+    title: "Events",
+    text: "Review regular services and visible leadership events.",
+    href: "/events",
+    linkLabel: "Open events",
+  },
 ];
 
 const generalLeaderCards: SupportingCard[] = [
@@ -67,6 +73,12 @@ const generalLeaderCards: SupportingCard[] = [
     text: "Review assignments that have been shared with you.",
     href: "/tasks",
     linkLabel: "Open tasks",
+  },
+  {
+    title: "Events",
+    text: "Review regular services and visible leadership events.",
+    href: "/events",
+    linkLabel: "Open events",
   },
 ];
 
@@ -140,6 +152,12 @@ export default async function DashboardPage() {
             text: "Read active leadership notices and urgent updates.",
             href: "/announcements",
             linkLabel: "Open announcements",
+          },
+          {
+            title: "Events",
+            text: "Review regular services and visible leadership events.",
+            href: "/events",
+            linkLabel: "Open events",
           },
         ]
       : generalLeaderCards;
