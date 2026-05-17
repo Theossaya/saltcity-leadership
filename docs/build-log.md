@@ -250,3 +250,14 @@ The admin-only announcement creation foundation was added without changing the c
 - Created `supabase/sql/011_announcement_create_grants.sql` with the authenticated insert grant and a strict admin insert RLS policy for active same-church admins.
 - Replaced the previous broad announcement admin manage policy with admin select plus strict insert policy, without adding update or delete grants.
 - Left announcement editing, deleting, read receipts, push notifications, rich text, and file attachments out of scope.
+
+## Day 9 Afternoon — Admin task creation foundation
+
+The admin-only task creation foundation was added without changing the core schema:
+
+- Added a compact create task form on `/tasks` for `church_admin` and `super_admin` users only.
+- Added a Server Action that validates task input, inserts through the authenticated Supabase server client, sets the initial status to `todo`, revalidates `/tasks` and `/dashboard`, and redirects with success/error notices.
+- Created `supabase/sql/012_task_create_grants.sql` with the authenticated insert grant and a strict admin insert RLS policy for active same-church admins.
+- Added RLS-respecting task create option queries for active assignees, active companies, and open follow-up cases.
+- Aligned the task due-date form minimum and server validation with the RLS rule allowing null dates or dates from Africa/Lagos today minus 30 days onward.
+- Left task editing, deleting, completion/progress updates, notifications, recurring tasks, and attachments out of scope.

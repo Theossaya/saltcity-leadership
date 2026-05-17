@@ -32,6 +32,23 @@ export type TaskOverview = {
   summary: TaskSummary;
 };
 
+export type TaskCreateOptions = {
+  assignees: Array<{
+    id: string;
+    name: string;
+    role: string;
+  }>;
+  companies: Array<{
+    id: string;
+    name: string;
+  }>;
+  followUpCases: Array<{
+    id: string;
+    label: string;
+    status: string;
+  }>;
+};
+
 export type TaskQueryResult<T> = {
   data: T;
   error: string | null;
@@ -66,7 +83,18 @@ type CompanyRow = {
 type FollowUpCaseRow = {
   id: string;
   company_id: string;
+  company_member_id?: string;
   status: string;
+};
+
+type MembershipOptionRow = {
+  user_id: string;
+  role: string;
+};
+
+type CompanyMemberRow = {
+  id: string;
+  full_name: string;
 };
 
 const emptyOverview: TaskOverview = {
@@ -79,6 +107,12 @@ const emptyOverview: TaskOverview = {
     overdue: 0,
     hasDueDates: false,
   },
+};
+
+const emptyCreateOptions: TaskCreateOptions = {
+  assignees: [],
+  companies: [],
+  followUpCases: [],
 };
 
 function toErrorMessage(scope: string, message: string) {
@@ -407,6 +441,146 @@ export async function getLeaderTasks(
         assignedCompanies.error,
         companyFollowUpCases.error,
         enriched.error,
+      ]
+        .filter(Boolean)
+        .join(" ") || null,
+  };
+}
+
+export async function getTaskCreateOptions(
+  churchId: string,
+): Promise<TaskQueryResult<TaskCreateOptions>> {
+  const supabase = await createClient();
+
+  const [
+    { data: membershipsData, error: membershipsError },
+    { data: companiesData, error: companiesError },
+    { data: followUpCasesData, error: followUpCasesError },
+  ] = await Promise.all([
+    supabase
+      .from("church_memberships")
+      .select("user_id, role")
+      .eq("church_id", churchId)
+      .eq("status", "active")
+      .order("role", { ascending: true })
+      .returns<MembershipOptionRow[]>(),
+    supabase
+      .from("companies")
+      .select("id, name")
+      .eq("church_id", churchId)
+      .eq("status", "active")
+      .order("name", { ascending: true })
+      .returns<CompanyRow[]>(),
+    supabase
+      .from("follow_up_cases")
+      .select("id, company_id, company_member_id, status")
+      .eq("church_id", churchId)
+      .in("status", ["open", "assigned", "contacted", "escalated"])
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .returns<FollowUpCaseRow[]>(),
+  ]);
+
+  if (membershipsError || companiesError || followUpCasesError) {
+    return {
+      data: emptyCreateOptions,
+      error:
+        [
+          membershipsError
+            ? toErrorMessage("Unable to load task assignees", membershipsError.message)
+            : null,
+          companiesError
+            ? toErrorMessage("Unable to load task companies", companiesError.message)
+            : null,
+          followUpCasesError
+            ? toErrorMessage(
+                "Unable to load task follow-up cases",
+                followUpCasesError.message,
+              )
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" ") || null,
+    };
+  }
+
+  const memberships = membershipsData ?? [];
+  const followUpCases = followUpCasesData ?? [];
+  const profileIds = uniqueIds(memberships.map((membership) => membership.user_id));
+  const companyMemberIds = uniqueIds(
+    followUpCases.map((followUpCase) => followUpCase.company_member_id ?? null),
+  );
+
+  const [
+    { data: profilesData, error: profilesError },
+    { data: companyMembersData, error: companyMembersError },
+  ] = await Promise.all([
+    profileIds.length > 0
+      ? supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", profileIds)
+          .returns<ProfileRow[]>()
+      : Promise.resolve({ data: [], error: null }),
+    companyMemberIds.length > 0
+      ? supabase
+          .from("company_members")
+          .select("id, full_name")
+          .in("id", companyMemberIds)
+          .returns<CompanyMemberRow[]>()
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const profilesById = new Map(
+    (profilesData ?? []).map((profile) => [
+      profile.id,
+      profile.full_name ?? "Active leader",
+    ]),
+  );
+  const companiesById = new Map(
+    (companiesData ?? []).map((company) => [company.id, company]),
+  );
+  const companyMembersById = new Map(
+    (companyMembersData ?? []).map((member) => [member.id, member]),
+  );
+
+  return {
+    data: {
+      assignees: memberships
+        .map((membership) => ({
+          id: membership.user_id,
+          name: profilesById.get(membership.user_id) ?? "Active leader",
+          role: membership.role,
+        }))
+        .sort((first, second) => first.name.localeCompare(second.name)),
+      companies: companiesData ?? [],
+      followUpCases: followUpCases.map((followUpCase) => {
+        const companyName =
+          companiesById.get(followUpCase.company_id)?.name ?? "Company";
+        const memberName = followUpCase.company_member_id
+          ? companyMembersById.get(followUpCase.company_member_id)?.full_name
+          : null;
+
+        return {
+          id: followUpCase.id,
+          label: memberName
+            ? `${memberName} - ${companyName}`
+            : `${companyName} follow-up`,
+          status: followUpCase.status,
+        };
+      }),
+    },
+    error:
+      [
+        profilesError
+          ? toErrorMessage("Unable to load task assignee names", profilesError.message)
+          : null,
+        companyMembersError
+          ? toErrorMessage(
+              "Unable to load task follow-up names",
+              companyMembersError.message,
+            )
+          : null,
       ]
         .filter(Boolean)
         .join(" ") || null,
