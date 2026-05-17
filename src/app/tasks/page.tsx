@@ -27,6 +27,7 @@ import { getTaskCreateMinimumDueDate } from "@/lib/validation/tasks";
 type TasksPageProps = {
   searchParams?: Promise<{
     created?: string | string[];
+    updated?: string | string[];
     error?: string | string[];
   }>;
 };
@@ -205,12 +206,18 @@ function CreateTaskForm({
 export default async function TasksPage({ searchParams }: TasksPageProps) {
   const resolvedSearchParams = await searchParams;
   const createdParam = resolvedSearchParams?.created;
+  const updatedParam = resolvedSearchParams?.updated;
   const errorParam = resolvedSearchParams?.error;
   const taskCreated =
     (Array.isArray(createdParam) ? createdParam[0] : createdParam) === "task";
+  const taskStatusUpdated =
+    (Array.isArray(updatedParam) ? updatedParam[0] : updatedParam) === "status";
   const createError =
     (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
     "unable-to-create-task";
+  const statusUpdateError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "unable-to-update-task";
   const { user, profile, primaryRole, churchId, church } =
     await getCurrentUser();
 
@@ -231,9 +238,21 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         </Alert>
       ) : null}
 
+      {taskStatusUpdated ? (
+        <Alert className="border-[#C8BDAF] bg-[#FBFAF8]">
+          <AlertDescription>Task status updated.</AlertDescription>
+        </Alert>
+      ) : null}
+
       {createError ? (
         <Alert variant="destructive">
           <AlertDescription>Task could not be created.</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {statusUpdateError ? (
+        <Alert variant="destructive">
+          <AlertDescription>Task status could not be updated.</AlertDescription>
         </Alert>
       ) : null}
     </>
@@ -264,7 +283,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     subtitle = "Leadership task visibility across the church.";
 
     const [tasksResult, createOptionsResult] = await Promise.all([
-      getAdminTasksOverview(churchId),
+      getAdminTasksOverview(churchId, user.id),
       getTaskCreateOptions(churchId),
     ]);
     const overview = tasksResult.data;

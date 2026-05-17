@@ -5,9 +5,13 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import { createClient } from "@/lib/supabase/server";
-import { taskCreateSchema } from "@/lib/validation/tasks";
+import {
+  taskCreateSchema,
+  taskStatusUpdateSchema,
+} from "@/lib/validation/tasks";
 
 const CREATE_TASK_ERROR_PATH = "/tasks?error=unable-to-create-task";
+const UPDATE_TASK_STATUS_ERROR_PATH = "/tasks?error=unable-to-update-task";
 
 function canCreateTask(role: string | null) {
   return role === "church_admin" || role === "super_admin";
@@ -69,4 +73,43 @@ export async function createTask(formData: FormData) {
   revalidatePath("/tasks");
   revalidatePath("/dashboard");
   redirect("/tasks?created=task");
+}
+
+export async function updateTaskStatus(formData: FormData) {
+  const { user, churchId } = await getCurrentUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!churchId) {
+    redirect(UPDATE_TASK_STATUS_ERROR_PATH);
+  }
+
+  const parsed = taskStatusUpdateSchema.safeParse({
+    taskId: getFormString(formData, "taskId"),
+    status: getFormString(formData, "status"),
+  });
+
+  if (!parsed.success) {
+    redirect(UPDATE_TASK_STATUS_ERROR_PATH);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .update({ status: parsed.data.status })
+    .eq("id", parsed.data.taskId)
+    .eq("church_id", churchId)
+    .eq("assigned_to", user.id)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    redirect(UPDATE_TASK_STATUS_ERROR_PATH);
+  }
+
+  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  redirect("/tasks?updated=status");
 }

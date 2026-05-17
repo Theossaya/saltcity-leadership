@@ -9,8 +9,10 @@ export type TaskListItem = {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority | null;
+  assignedTo: string | null;
   dueDate: string | null;
   assignedUserName: string | null;
+  canUpdateStatus: boolean;
   companyName: string | null;
   followUpCaseId: string | null;
   followUpCaseStatus: string | null;
@@ -238,7 +240,10 @@ async function getCompanyFollowUpCaseIds(churchId: string, companyIds: string[])
   };
 }
 
-async function enrichTasks(tasks: TaskRow[]): Promise<TaskQueryResult<TaskOverview>> {
+async function enrichTasks(
+  tasks: TaskRow[],
+  currentUserId: string,
+): Promise<TaskQueryResult<TaskOverview>> {
   if (tasks.length === 0) {
     return {
       data: emptyOverview,
@@ -317,10 +322,12 @@ async function enrichTasks(tasks: TaskRow[]): Promise<TaskQueryResult<TaskOvervi
       description: task.description,
       status: task.status,
       priority: task.priority,
+      assignedTo: task.assigned_to,
       dueDate: task.due_date,
       assignedUserName: task.assigned_to
         ? profilesById.get(task.assigned_to) ?? "Assigned leader"
         : null,
+      canUpdateStatus: task.assigned_to === currentUserId,
       companyName: companyId ? companiesById.get(companyId)?.name ?? null : null,
       followUpCaseId: task.follow_up_case_id,
       followUpCaseStatus: followUpCase?.status ?? null,
@@ -353,6 +360,7 @@ async function enrichTasks(tasks: TaskRow[]): Promise<TaskQueryResult<TaskOvervi
 
 export async function getAdminTasksOverview(
   churchId: string,
+  currentUserId: string,
 ): Promise<TaskQueryResult<TaskOverview>> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -371,7 +379,7 @@ export async function getAdminTasksOverview(
     };
   }
 
-  return enrichTasks((data ?? []).sort(sortTasks));
+  return enrichTasks((data ?? []).sort(sortTasks), currentUserId);
 }
 
 export async function getLeaderTasks(
@@ -432,6 +440,7 @@ export async function getLeaderTasks(
 
   const enriched = await enrichTasks(
     mergeTasks(taskResults.map((result) => result.data ?? [])),
+    userId,
   );
 
   return {

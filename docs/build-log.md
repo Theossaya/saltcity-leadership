@@ -261,3 +261,12 @@ The admin-only task creation foundation was added without changing the core sche
 - Added RLS-respecting task create option queries for active assignees, active companies, and open follow-up cases.
 - Aligned the task due-date form minimum and server validation with the RLS rule allowing null dates or dates from Africa/Lagos today minus 30 days onward.
 - Left task editing, deleting, completion/progress updates, notifications, recurring tasks, and attachments out of scope.
+
+## Day 10 Morning — Task status update foundation
+
+The assigned-user task status update foundation was added without changing the core schema:
+
+- Added a compact status update control on `/tasks` only for tasks assigned to the signed-in leader.
+- Created `supabase/sql/013_task_status_update_grants.sql` with a column-limited authenticated update grant for `public.tasks.status` and a strict same-church assigned-user update policy.
+- Added status update validation and a Server Action that updates only `status`, revalidates `/tasks` and `/dashboard`, and returns success/error notices.
+- Left task title/description editing, reassignment, due date and priority changes, deletion, comments, notifications, and broad admin task editing out of scope.

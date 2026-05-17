@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TASK_STATUSES } from "@/lib/constants/statuses";
+
 export const TASK_CREATE_PRIORITIES = [
   "low",
   "normal",
@@ -96,3 +98,10 @@ export const taskCreateSchema = z
   });
 
 export type TaskCreateInput = z.infer<typeof taskCreateSchema>;
+
+export const taskStatusUpdateSchema = z.object({
+  taskId: z.string().uuid(),
+  status: z.enum(TASK_STATUSES),
+});
+
+export type TaskStatusUpdateInput = z.infer<typeof taskStatusUpdateSchema>;
