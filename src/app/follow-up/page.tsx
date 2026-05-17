@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,8 +12,17 @@ import { FollowUpSummaryCard } from "@/features/follow-up/components/follow-up-s
 import {
   getAdminFollowUpQueue,
   getCompanyFollowUpQueue,
+  getFollowUpCreateOptions,
+  type FollowUpCreateOptions,
   type FollowUpQueue,
 } from "@/features/follow-up/queries";
+
+type FollowUpPageProps = {
+  searchParams?: Promise<{
+    created?: string | string[];
+    error?: string | string[];
+  }>;
+};
 
 function RestrictedState() {
   return (
@@ -30,7 +40,15 @@ function RestrictedState() {
   );
 }
 
-function FollowUpQueueList({ queue }: { queue: FollowUpQueue }) {
+function FollowUpQueueList({
+  queue,
+  createOptions,
+  canCreateCase = false,
+}: {
+  queue: FollowUpQueue;
+  createOptions?: FollowUpCreateOptions;
+  canCreateCase?: boolean;
+}) {
   if (queue.items.length === 0) {
     return <FollowUpEmptyState />;
   }
@@ -38,13 +56,26 @@ function FollowUpQueueList({ queue }: { queue: FollowUpQueue }) {
   return (
     <section className="grid gap-3">
       {queue.items.map((item) => (
-        <FollowUpCard key={item.absenteeRecordId} item={item} />
+        <FollowUpCard
+          key={item.absenteeRecordId}
+          item={item}
+          createOptions={createOptions}
+          canCreateCase={canCreateCase}
+        />
       ))}
     </section>
   );
 }
 
-export default async function FollowUpPage() {
+export default async function FollowUpPage({ searchParams }: FollowUpPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const createdParam = resolvedSearchParams?.created;
+  const errorParam = resolvedSearchParams?.error;
+  const caseCreated =
+    (Array.isArray(createdParam) ? createdParam[0] : createdParam) === "case";
+  const createError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "unable-to-create-case";
   const { user, profile, primaryRole, churchId, church } =
     await getCurrentUser();
 
@@ -57,6 +88,23 @@ export default async function FollowUpPage() {
     primaryRole === "church_admin" || primaryRole === "super_admin";
   const isCompanyLeader =
     primaryRole === "company_leader" || primaryRole === "assistant_leader";
+  const actionNotice = (
+    <>
+      {caseCreated ? (
+        <Alert className="border-[#C8BDAF] bg-[#FBFAF8]">
+          <AlertDescription>Follow-up case created.</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {createError ? (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Follow-up case could not be created.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+    </>
+  );
 
   let title = "Follow-up";
   let subtitle = "Absentee follow-up visibility will appear when assigned.";
@@ -82,12 +130,18 @@ export default async function FollowUpPage() {
     title = "Follow-up";
     subtitle = "Absentee follow-up visibility across companies.";
 
-    const queueResult = await getAdminFollowUpQueue(churchId);
+    const [queueResult, createOptionsResult] = await Promise.all([
+      getAdminFollowUpQueue(churchId),
+      getFollowUpCreateOptions(churchId),
+    ]);
     const queue = queueResult.data;
 
     content = (
       <>
         {queueResult.error ? <QueryNotice message={queueResult.error} /> : null}
+        {createOptionsResult.error ? (
+          <QueryNotice message={createOptionsResult.error} />
+        ) : null}
 
         <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-4">
           <FollowUpSummaryCard
@@ -108,7 +162,11 @@ export default async function FollowUpPage() {
           />
         </section>
 
-        <FollowUpQueueList queue={queue} />
+        <FollowUpQueueList
+          queue={queue}
+          createOptions={createOptionsResult.data}
+          canCreateCase
+        />
       </>
     );
   } else if (isCompanyLeader) {
@@ -149,6 +207,8 @@ export default async function FollowUpPage() {
       churchName={church?.name}
     >
       <PageHeader title={title} subtitle={subtitle} />
+
+      {actionNotice}
 
       {content}
     </AppShell>

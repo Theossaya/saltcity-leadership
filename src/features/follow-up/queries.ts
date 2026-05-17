@@ -49,6 +49,14 @@ export type FollowUpQueryResult<T> = {
   error: string | null;
 };
 
+export type FollowUpCreateOptions = {
+  assignees: Array<{
+    id: string;
+    name: string;
+    role: string;
+  }>;
+};
+
 type AbsenteeRecordRow = {
   id: string;
   weekly_report_id: string;
@@ -91,7 +99,16 @@ type ProfileRow = {
   full_name: string | null;
 };
 
+type MembershipOptionRow = {
+  user_id: string;
+  role: string;
+};
+
 const RECENT_WEEK_COUNT = 4;
+
+const emptyCreateOptions: FollowUpCreateOptions = {
+  assignees: [],
+};
 
 function toErrorMessage(scope: string, message: string) {
   return `${scope}: ${message}`;
@@ -375,4 +392,60 @@ export async function getCompanyFollowUpQueue(
   }
 
   return getFollowUpQueue(churchId, assignedCompanies.companyIds);
+}
+
+export async function getFollowUpCreateOptions(
+  churchId: string,
+): Promise<FollowUpQueryResult<FollowUpCreateOptions>> {
+  const supabase = await createClient();
+  const { data: membershipsData, error: membershipsError } = await supabase
+    .from("church_memberships")
+    .select("user_id, role")
+    .eq("church_id", churchId)
+    .eq("status", "active")
+    .order("role", { ascending: true })
+    .returns<MembershipOptionRow[]>();
+
+  if (membershipsError) {
+    return {
+      data: emptyCreateOptions,
+      error: toErrorMessage(
+        "Unable to load follow-up assignees",
+        membershipsError.message,
+      ),
+    };
+  }
+
+  const memberships = membershipsData ?? [];
+  const profileIds = uniqueIds(memberships.map((membership) => membership.user_id));
+  const { data: profilesData, error: profilesError } =
+    profileIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", profileIds)
+          .returns<ProfileRow[]>()
+      : { data: [], error: null };
+
+  const profilesById = new Map(
+    (profilesData ?? []).map((profile) => [
+      profile.id,
+      profile.full_name ?? "Active leader",
+    ]),
+  );
+
+  return {
+    data: {
+      assignees: memberships
+        .map((membership) => ({
+          id: membership.user_id,
+          name: profilesById.get(membership.user_id) ?? "Active leader",
+          role: membership.role,
+        }))
+        .sort((first, second) => first.name.localeCompare(second.name)),
+    },
+    error: profilesError
+      ? toErrorMessage("Unable to load follow-up assignee names", profilesError.message)
+      : null,
+  };
 }

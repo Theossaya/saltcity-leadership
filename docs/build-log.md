@@ -270,3 +270,14 @@ The assigned-user task status update foundation was added without changing the c
 - Created `supabase/sql/013_task_status_update_grants.sql` with a column-limited authenticated update grant for `public.tasks.status` and a strict same-church assigned-user update policy.
 - Added status update validation and a Server Action that updates only `status`, revalidates `/tasks` and `/dashboard`, and returns success/error notices.
 - Left task title/description editing, reassignment, due date and priority changes, deletion, comments, notifications, and broad admin task editing out of scope.
+
+## Day 10 Afternoon — Follow-up case creation foundation
+
+The admin-only follow-up case creation foundation was added without changing the core schema:
+
+- Added follow-up case creation from existing absentee records on `/follow-up` for `church_admin` and `super_admin` users only.
+- Created `supabase/sql/014_follow_up_case_create_grants.sql` with the authenticated insert grant, a safe admin select replacement policy, a strict same-church admin insert policy tied to absentee record ownership, matching company/member links, safe initial status, supported priority values, and active same-church assignees.
+- Enforced one active follow-up case per absentee record with a partial unique index on `follow_up_cases.absentee_record_id`, avoiding self-referencing RLS checks inside the insert policy.
+- Added zod validation and a Server Action that uses the authenticated Supabase server client, prevents duplicate active cases for the same absentee record where visible, revalidates `/follow-up` and `/dashboard`, and returns success/error notices.
+- Added RLS-respecting assignee option loading for active leaders in the church.
+- Left case updates, contact tracking, status changes, reassignment after creation, deletion, notifications, and task auto-creation out of scope.

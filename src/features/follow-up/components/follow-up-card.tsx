@@ -1,6 +1,11 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { createFollowUpCase } from "@/features/follow-up/actions";
 import type {
+  FollowUpCreateOptions,
   FollowUpQueueItem,
   FollowUpStatus,
 } from "@/features/follow-up/queries";
@@ -8,11 +13,15 @@ import {
   ABSENCE_REASON_LABELS,
   FOLLOW_UP_STATUS_LABELS,
   REPORT_STATUS_LABELS,
+  TASK_PRIORITIES,
+  TASK_PRIORITY_LABELS,
 } from "@/lib/constants/statuses";
 import { cn } from "@/lib/utils";
 
 type FollowUpCardProps = {
   item: FollowUpQueueItem;
+  createOptions?: FollowUpCreateOptions;
+  canCreateCase?: boolean;
 };
 
 const followUpStatusClasses: Record<FollowUpStatus, string> = {
@@ -46,7 +55,107 @@ function getFollowUpStatusLabel(status: FollowUpStatus) {
       ];
 }
 
-export function FollowUpCard({ item }: FollowUpCardProps) {
+function formatRoleLabel(role: string) {
+  return role
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function CreateFollowUpCaseForm({
+  absenteeRecordId,
+  options,
+}: {
+  absenteeRecordId: string;
+  options: FollowUpCreateOptions;
+}) {
+  return (
+    <form
+      action={createFollowUpCase}
+      className="grid gap-3 rounded-lg border border-primary/15 bg-[#FBFAF8] p-3 sm:p-4"
+    >
+      <input type="hidden" name="absenteeRecordId" value={absenteeRecordId} />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor={`follow-up-assigned-to-${absenteeRecordId}`}>
+            Assigned leader
+          </Label>
+          <select
+            id={`follow-up-assigned-to-${absenteeRecordId}`}
+            name="assignedTo"
+            defaultValue=""
+            className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
+          >
+            <option value="">Unassigned</option>
+            {options.assignees.map((assignee) => (
+              <option key={assignee.id} value={assignee.id}>
+                {assignee.name} - {formatRoleLabel(assignee.role)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor={`follow-up-priority-${absenteeRecordId}`}>
+            Priority
+          </Label>
+          <select
+            id={`follow-up-priority-${absenteeRecordId}`}
+            name="priority"
+            defaultValue="normal"
+            className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
+          >
+            {TASK_PRIORITIES.map((priority) => (
+              <option key={priority} value={priority}>
+                {TASK_PRIORITY_LABELS[priority]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor={`follow-up-next-action-${absenteeRecordId}`}>
+          Next action
+        </Label>
+        <Textarea
+          id={`follow-up-next-action-${absenteeRecordId}`}
+          name="nextAction"
+          maxLength={500}
+          className="min-h-20 bg-background"
+          placeholder="Optional next step for this case."
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor={`follow-up-notes-${absenteeRecordId}`}>Notes</Label>
+        <Textarea
+          id={`follow-up-notes-${absenteeRecordId}`}
+          name="notes"
+          maxLength={2000}
+          className="min-h-24 bg-background"
+          placeholder="Optional private context for follow-up."
+        />
+      </div>
+
+      <div className="border-t border-border/80 pt-1">
+        <Button
+          type="submit"
+          className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+        >
+          Create follow-up case
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function FollowUpCard({
+  item,
+  createOptions,
+  canCreateCase = false,
+}: FollowUpCardProps) {
   return (
     <Card className="rounded-lg border-primary/15 bg-card shadow-[0_10px_28px_rgba(21,18,23,0.05)]">
       <CardHeader className="gap-3 pb-2">
@@ -129,6 +238,13 @@ export function FollowUpCard({ item }: FollowUpCardProps) {
               {item.reasonNote}
             </p>
           </div>
+        ) : null}
+
+        {canCreateCase && !item.hasFollowUpCase && createOptions ? (
+          <CreateFollowUpCaseForm
+            absenteeRecordId={item.absenteeRecordId}
+            options={createOptions}
+          />
         ) : null}
       </CardContent>
     </Card>
