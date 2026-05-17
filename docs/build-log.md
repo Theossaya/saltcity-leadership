@@ -240,3 +240,13 @@ The dev/test demo seed foundation was added without schema, RLS, auth, app logic
 - Kept `admin@example.com` and `leader@example.com` profile/membership links optional and derived from real Supabase Auth users when those users exist.
 - Isolated report and follow-up demo records to separate demo companies so manually tested Alpha/Beta/Gamma reports are not overwritten.
 - Documented the file as dev/test only, rerunnable where possible, and not intended as production data.
+
+## Day 9 Morning — Admin announcement creation foundation
+
+The admin-only announcement creation foundation was added without changing the core schema:
+
+- Added a compact create announcement form on `/announcements` for `church_admin` and `super_admin` users only.
+- Added a Server Action that validates plain-text announcement input, inserts through the authenticated Supabase server client, revalidates `/announcements` and `/dashboard`, and redirects with success/error notices.
+- Created `supabase/sql/011_announcement_create_grants.sql` with the authenticated insert grant and a strict admin insert RLS policy for active same-church admins.
+- Replaced the previous broad announcement admin manage policy with admin select plus strict insert policy, without adding update or delete grants.
+- Left announcement editing, deleting, read receipts, push notifications, rich text, and file attachments out of scope.
