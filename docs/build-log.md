@@ -228,3 +228,15 @@ The read-only events foundation was added using the existing `public.events` sch
 - Added light dashboard links to `/events` without adding dashboard event queries.
 - Confirmed an events schema exists in `supabase/sql/001_initial_schema.sql`, with RLS policies and authenticated select grants already present in `002_rls_policies.sql` and `004_api_grants.sql`.
 - Left event creation, editing, attendance marking, notifications, special programme management, and all event write actions out of scope.
+
+## Day 8 Afternoon — Demo data and QA seed foundation
+
+The dev/test demo seed foundation was added without schema, RLS, auth, app logic, write-action, or UI changes:
+
+- Created `supabase/sql/010_demo_data.sql` to run after migrations `001` through `009`.
+- Seeded richer demo events, announcements, tasks, demo-only companies, company members, current-week demo reports, absentee records, and linked follow-up cases for QA coverage.
+- Made current-week demo reports rolling fixed-ID rows so rerunning the seed across Africa/Lagos week changes moves the same QA reports to the current week.
+- Matched the submitted Company Epsilon Demo report audit user to the seeded Epsilon company assignment when `leader@example.com` exists.
+- Kept `admin@example.com` and `leader@example.com` profile/membership links optional and derived from real Supabase Auth users when those users exist.
+- Isolated report and follow-up demo records to separate demo companies so manually tested Alpha/Beta/Gamma reports are not overwritten.
+- Documented the file as dev/test only, rerunnable where possible, and not intended as production data.
