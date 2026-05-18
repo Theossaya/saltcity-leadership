@@ -11,15 +11,18 @@ import { FollowUpEmptyState } from "@/features/follow-up/components/follow-up-em
 import { FollowUpSummaryCard } from "@/features/follow-up/components/follow-up-summary-card";
 import {
   getAdminFollowUpQueue,
+  getAssignedFollowUpQueue,
   getCompanyFollowUpQueue,
   getFollowUpCreateOptions,
   type FollowUpCreateOptions,
   type FollowUpQueue,
+  type FollowUpQueueItem,
 } from "@/features/follow-up/queries";
 
 type FollowUpPageProps = {
   searchParams?: Promise<{
     created?: string | string[];
+    updated?: string | string[];
     error?: string | string[];
   }>;
 };
@@ -67,15 +70,88 @@ function FollowUpQueueList({
   );
 }
 
+function getFollowUpItemKey(item: FollowUpQueueItem) {
+  return item.followUpCaseId ?? item.absenteeRecordId;
+}
+
+function summarizeFollowUpItems(items: FollowUpQueueItem[]) {
+  return {
+    totalItems: items.length,
+    notStarted: items.filter((item) => item.followUpStatus === "not_started")
+      .length,
+    withCase: items.filter((item) => item.hasFollowUpCase).length,
+    currentWeek: items.filter((item) => item.isCurrentWeek).length,
+  };
+}
+
+function mergeFollowUpQueues(
+  companyQueue: FollowUpQueue,
+  assignedQueue: FollowUpQueue,
+): FollowUpQueue {
+  const itemsByKey = new Map<string, FollowUpQueueItem>();
+
+  for (const item of companyQueue.items) {
+    itemsByKey.set(getFollowUpItemKey(item), item);
+  }
+
+  for (const item of assignedQueue.items) {
+    const key = getFollowUpItemKey(item);
+    const existingItem = itemsByKey.get(key);
+
+    itemsByKey.set(
+      key,
+      existingItem
+        ? {
+            ...item,
+            ...existingItem,
+            followUpCaseId: existingItem.followUpCaseId ?? item.followUpCaseId,
+            followUpStatus: item.followUpStatus,
+            hasFollowUpCase: existingItem.hasFollowUpCase || item.hasFollowUpCase,
+            assignedUserId: existingItem.assignedUserId ?? item.assignedUserId,
+            assignedUserName:
+              existingItem.assignedUserName ?? item.assignedUserName,
+            lastContactDate: item.lastContactDate ?? existingItem.lastContactDate,
+            nextAction: item.nextAction ?? existingItem.nextAction,
+            notes: item.notes ?? existingItem.notes,
+            resolvedAt: item.resolvedAt ?? existingItem.resolvedAt,
+            followUpCaseCreatedAt:
+              existingItem.followUpCaseCreatedAt ?? item.followUpCaseCreatedAt,
+            canUpdateCase: existingItem.canUpdateCase || item.canUpdateCase,
+          }
+        : item,
+    );
+  }
+
+  const items = Array.from(itemsByKey.values()).sort((first, second) => {
+    if (first.isCurrentWeek !== second.isCurrentWeek) {
+      return first.isCurrentWeek ? -1 : 1;
+    }
+
+    return second.absenceDate.localeCompare(first.absenceDate);
+  });
+
+  return {
+    week: companyQueue.week,
+    items,
+    summary: summarizeFollowUpItems(items),
+  };
+}
+
 export default async function FollowUpPage({ searchParams }: FollowUpPageProps) {
   const resolvedSearchParams = await searchParams;
   const createdParam = resolvedSearchParams?.created;
+  const updatedParam = resolvedSearchParams?.updated;
   const errorParam = resolvedSearchParams?.error;
   const caseCreated =
     (Array.isArray(createdParam) ? createdParam[0] : createdParam) === "case";
+  const caseUpdated =
+    (Array.isArray(updatedParam) ? updatedParam[0] : updatedParam) === "case";
   const createError =
     (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
     "unable-to-create-case";
+  const updateError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "unable-to-update-case";
   const { user, profile, primaryRole, churchId, church } =
     await getCurrentUser();
 
@@ -96,10 +172,24 @@ export default async function FollowUpPage({ searchParams }: FollowUpPageProps) 
         </Alert>
       ) : null}
 
+      {caseUpdated ? (
+        <Alert className="border-[#C8BDAF] bg-[#FBFAF8]">
+          <AlertDescription>Follow-up case updated.</AlertDescription>
+        </Alert>
+      ) : null}
+
       {createError ? (
         <Alert variant="destructive">
           <AlertDescription>
             Follow-up case could not be created.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {updateError ? (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Follow-up case could not be updated.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -131,7 +221,7 @@ export default async function FollowUpPage({ searchParams }: FollowUpPageProps) 
     subtitle = "Absentee follow-up visibility across companies.";
 
     const [queueResult, createOptionsResult] = await Promise.all([
-      getAdminFollowUpQueue(churchId),
+      getAdminFollowUpQueue(churchId, user.id),
       getFollowUpCreateOptions(churchId),
     ]);
     const queue = queueResult.data;
@@ -173,12 +263,23 @@ export default async function FollowUpPage({ searchParams }: FollowUpPageProps) 
     title = "Follow-up";
     subtitle = "Absentee follow-up for your assigned company.";
 
-    const queueResult = await getCompanyFollowUpQueue(user.id, churchId);
-    const queue = queueResult.data;
+    const [companyQueueResult, assignedQueueResult] = await Promise.all([
+      getCompanyFollowUpQueue(user.id, churchId),
+      getAssignedFollowUpQueue(user.id, churchId),
+    ]);
+    const queue = mergeFollowUpQueues(
+      companyQueueResult.data,
+      assignedQueueResult.data,
+    );
 
     content = (
       <>
-        {queueResult.error ? <QueryNotice message={queueResult.error} /> : null}
+        {companyQueueResult.error ? (
+          <QueryNotice message={companyQueueResult.error} />
+        ) : null}
+        {assignedQueueResult.error ? (
+          <QueryNotice message={assignedQueueResult.error} />
+        ) : null}
 
         <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-3">
           <FollowUpSummaryCard
@@ -192,6 +293,41 @@ export default async function FollowUpPage({ searchParams }: FollowUpPageProps) 
           <FollowUpSummaryCard
             label="Not started"
             value={queue.summary.notStarted}
+          />
+        </section>
+
+        <FollowUpQueueList queue={queue} />
+      </>
+    );
+  } else {
+    title = "Follow-up";
+    subtitle = "Follow-up cases assigned to you.";
+
+    const queueResult = await getAssignedFollowUpQueue(user.id, churchId);
+    const queue = queueResult.data;
+
+    content = (
+      <>
+        {queueResult.error ? <QueryNotice message={queueResult.error} /> : null}
+
+        <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-3">
+          <FollowUpSummaryCard
+            label="Assigned"
+            value={queue.summary.totalItems}
+          />
+          <FollowUpSummaryCard
+            label="Contacted"
+            value={
+              queue.items.filter((item) => item.followUpStatus === "contacted")
+                .length
+            }
+          />
+          <FollowUpSummaryCard
+            label="Escalated"
+            value={
+              queue.items.filter((item) => item.followUpStatus === "escalated")
+                .length
+            }
           />
         </section>
 

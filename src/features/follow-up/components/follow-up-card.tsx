@@ -3,7 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createFollowUpCase } from "@/features/follow-up/actions";
+import {
+  createFollowUpCase,
+  updateFollowUpCaseProgress,
+} from "@/features/follow-up/actions";
 import type {
   FollowUpCreateOptions,
   FollowUpQueueItem,
@@ -11,6 +14,7 @@ import type {
 } from "@/features/follow-up/queries";
 import {
   ABSENCE_REASON_LABELS,
+  FOLLOW_UP_STATUSES,
   FOLLOW_UP_STATUS_LABELS,
   REPORT_STATUS_LABELS,
   TASK_PRIORITIES,
@@ -38,6 +42,15 @@ function formatDate(value: string) {
     dateStyle: "medium",
     timeZone: "Africa/Lagos",
   }).format(new Date(`${value}T00:00:00+01:00`));
+}
+
+function getTodayDateInput() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function getReportStatusLabel(status: string) {
@@ -151,6 +164,96 @@ function CreateFollowUpCaseForm({
   );
 }
 
+function UpdateFollowUpCaseProgressForm({ item }: { item: FollowUpQueueItem }) {
+  if (!item.followUpCaseId) {
+    return null;
+  }
+
+  const statusOptions = item.assignedUserId
+    ? FOLLOW_UP_STATUSES
+    : FOLLOW_UP_STATUSES.filter((status) => status !== "assigned");
+
+  return (
+    <form
+      action={updateFollowUpCaseProgress}
+      className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-3 sm:p-4"
+    >
+      <input type="hidden" name="followUpCaseId" value={item.followUpCaseId} />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-2">
+          <Label htmlFor={`follow-up-status-${item.followUpCaseId}`}>
+            Status
+          </Label>
+          <select
+            id={`follow-up-status-${item.followUpCaseId}`}
+            name="status"
+            defaultValue={item.followUpStatus}
+            className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
+          >
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {FOLLOW_UP_STATUS_LABELS[status]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor={`follow-up-date-contacted-${item.followUpCaseId}`}>
+            Date contacted
+          </Label>
+          <input
+            id={`follow-up-date-contacted-${item.followUpCaseId}`}
+            name="dateContacted"
+            type="date"
+            defaultValue={item.lastContactDate ?? ""}
+            max={getTodayDateInput()}
+            className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor={`follow-up-next-action-update-${item.followUpCaseId}`}>
+          Next action
+        </Label>
+        <Textarea
+          id={`follow-up-next-action-update-${item.followUpCaseId}`}
+          name="nextAction"
+          defaultValue={item.nextAction ?? ""}
+          maxLength={500}
+          className="min-h-20 bg-background"
+          placeholder="Optional next step for this case."
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor={`follow-up-notes-update-${item.followUpCaseId}`}>
+          Notes
+        </Label>
+        <Textarea
+          id={`follow-up-notes-update-${item.followUpCaseId}`}
+          name="notes"
+          defaultValue={item.notes ?? ""}
+          maxLength={2000}
+          className="min-h-24 bg-background"
+          placeholder="Optional private context for follow-up."
+        />
+      </div>
+
+      <div className="border-t border-border/80 pt-1">
+        <Button
+          type="submit"
+          className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+        >
+          Update follow-up
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function FollowUpCard({
   item,
   createOptions,
@@ -184,7 +287,7 @@ export function FollowUpCard({
         <div className="grid gap-3 rounded-lg border border-primary/15 bg-[#F6F1EB] p-3 sm:grid-cols-3 sm:p-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-              Absence date
+              {item.contextDateLabel}
             </p>
             <p className="mt-1 font-medium text-foreground">
               {formatDate(item.absenceDate)}
@@ -229,6 +332,32 @@ export function FollowUpCard({
           ) : null}
         </div>
 
+        {item.nextAction || item.notes ? (
+          <div className="grid gap-3">
+            {item.nextAction ? (
+              <div className="rounded-lg border border-border/80 bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
+                  Next action
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {item.nextAction}
+                </p>
+              </div>
+            ) : null}
+
+            {item.notes ? (
+              <div className="rounded-lg border border-border/80 bg-white px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
+                  Case notes
+                </p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {item.notes}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {item.reasonNote ? (
           <div className="rounded-lg border border-border/80 bg-white px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
@@ -246,6 +375,8 @@ export function FollowUpCard({
             options={createOptions}
           />
         ) : null}
+
+        {item.canUpdateCase ? <UpdateFollowUpCaseProgressForm item={item} /> : null}
       </CardContent>
     </Card>
   );

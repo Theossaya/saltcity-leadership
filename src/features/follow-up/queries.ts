@@ -11,6 +11,8 @@ export type FollowUpStatus =
 
 export type FollowUpQueueItem = {
   absenteeRecordId: string;
+  followUpCaseId: string | null;
+  contextDateLabel: string;
   memberName: string;
   companyName: string;
   absenceDate: string;
@@ -21,11 +23,16 @@ export type FollowUpQueueItem = {
   reportWeekEnd: string;
   followUpStatus: FollowUpStatus;
   hasFollowUpCase: boolean;
+  assignedUserId: string | null;
   assignedUserName: string | null;
   lastContactDate: string | null;
+  nextAction: string | null;
+  notes: string | null;
+  resolvedAt: string | null;
   followUpCaseCreatedAt: string | null;
   createdAt: string | null;
   isCurrentWeek: boolean;
+  canUpdateCase: boolean;
 };
 
 export type FollowUpQueueSummary = {
@@ -87,11 +94,17 @@ type CompanyMemberRow = {
 
 type FollowUpCaseRow = {
   id: string;
+  company_id: string;
+  company_member_id: string;
   absentee_record_id: string | null;
   status: Exclude<FollowUpStatus, "not_started">;
   assigned_to: string | null;
   date_contacted: string | null;
+  next_action: string | null;
+  notes: string | null;
+  resolved_at: string | null;
   created_at: string | null;
+  updated_at: string | null;
 };
 
 type ProfileRow = {
@@ -127,6 +140,45 @@ function getRecentWeekStart(currentWeekStart: string) {
 
 function uniqueIds(ids: Array<string | null>) {
   return Array.from(new Set(ids.filter((id): id is string => Boolean(id))));
+}
+
+function isActiveFollowUpCase(status: FollowUpCaseRow["status"]) {
+  return ["open", "assigned", "contacted", "escalated"].includes(status);
+}
+
+function getFollowUpCaseTimestamp(followUpCase: FollowUpCaseRow) {
+  return followUpCase.updated_at ?? followUpCase.created_at ?? "";
+}
+
+function shouldPreferFollowUpCase(
+  candidate: FollowUpCaseRow,
+  current: FollowUpCaseRow,
+) {
+  const candidateIsActive = isActiveFollowUpCase(candidate.status);
+  const currentIsActive = isActiveFollowUpCase(current.status);
+
+  if (candidateIsActive !== currentIsActive) {
+    return candidateIsActive;
+  }
+
+  return getFollowUpCaseTimestamp(candidate).localeCompare(
+    getFollowUpCaseTimestamp(current),
+  ) > 0;
+}
+
+function setPreferredFollowUpCase(
+  casesByAbsenteeRecordId: Map<string, FollowUpCaseRow>,
+  followUpCase: FollowUpCaseRow,
+) {
+  if (!followUpCase.absentee_record_id) {
+    return;
+  }
+
+  const current = casesByAbsenteeRecordId.get(followUpCase.absentee_record_id);
+
+  if (!current || shouldPreferFollowUpCase(followUpCase, current)) {
+    casesByAbsenteeRecordId.set(followUpCase.absentee_record_id, followUpCase);
+  }
 }
 
 function emptyQueue(): FollowUpQueue {
@@ -180,6 +232,10 @@ async function getAssignedCompanyIds(userId: string, churchId: string) {
 async function getFollowUpQueue(
   churchId: string,
   companyIds?: string[],
+  options?: {
+    currentUserId?: string;
+    canUpdateAllCases?: boolean;
+  },
 ): Promise<FollowUpQueryResult<FollowUpQueue>> {
   const supabase = await createClient();
   const week = getCurrentReportWeek();
@@ -265,7 +321,7 @@ async function getFollowUpQueue(
     supabase
       .from("follow_up_cases")
       .select(
-        "id, absentee_record_id, status, assigned_to, date_contacted, created_at",
+        "id, company_id, company_member_id, absentee_record_id, status, assigned_to, date_contacted, next_action, notes, resolved_at, created_at, updated_at",
       )
       .eq("church_id", churchId)
       .in("absentee_record_id", absenteeRecordIds)
@@ -303,18 +359,23 @@ async function getFollowUpQueue(
   const casesByAbsenteeRecordId = new Map<string, FollowUpCaseRow>();
 
   for (const followUpCase of cases) {
-    if (followUpCase.absentee_record_id) {
-      casesByAbsenteeRecordId.set(followUpCase.absentee_record_id, followUpCase);
-    }
+    setPreferredFollowUpCase(casesByAbsenteeRecordId, followUpCase);
   }
 
   const items = absenteeRecords
     .map((record) => {
       const report = reportsById.get(record.weekly_report_id);
       const followUpCase = casesByAbsenteeRecordId.get(record.id);
+      const canUpdateCase = Boolean(
+        followUpCase &&
+          (options?.canUpdateAllCases ||
+            followUpCase.assigned_to === options?.currentUserId),
+      );
 
       return {
         absenteeRecordId: record.id,
+        followUpCaseId: followUpCase?.id ?? null,
+        contextDateLabel: "Absence date",
         memberName:
           membersById.get(record.company_member_id)?.full_name ??
           "Company member",
@@ -327,13 +388,18 @@ async function getFollowUpQueue(
         reportWeekEnd: report?.report_week_end ?? record.absence_date,
         followUpStatus: followUpCase?.status ?? "not_started",
         hasFollowUpCase: Boolean(followUpCase),
+        assignedUserId: followUpCase?.assigned_to ?? null,
         assignedUserName: followUpCase?.assigned_to
           ? profileNames.get(followUpCase.assigned_to) ?? null
           : null,
         lastContactDate: followUpCase?.date_contacted ?? null,
+        nextAction: followUpCase?.next_action ?? null,
+        notes: followUpCase?.notes ?? null,
+        resolvedAt: followUpCase?.resolved_at ?? null,
         followUpCaseCreatedAt: followUpCase?.created_at ?? null,
         createdAt: record.created_at,
         isCurrentWeek: report?.report_week_start === week.reportWeekStart,
+        canUpdateCase,
       } satisfies FollowUpQueueItem;
     })
     .filter((item) => item.followUpStatus !== "resolved")
@@ -374,8 +440,12 @@ async function getFollowUpQueue(
 
 export async function getAdminFollowUpQueue(
   churchId: string,
+  userId?: string,
 ): Promise<FollowUpQueryResult<FollowUpQueue>> {
-  return getFollowUpQueue(churchId);
+  return getFollowUpQueue(churchId, undefined, {
+    currentUserId: userId,
+    canUpdateAllCases: true,
+  });
 }
 
 export async function getCompanyFollowUpQueue(
@@ -391,7 +461,188 @@ export async function getCompanyFollowUpQueue(
     };
   }
 
-  return getFollowUpQueue(churchId, assignedCompanies.companyIds);
+  return getFollowUpQueue(churchId, assignedCompanies.companyIds, {
+    currentUserId: userId,
+    canUpdateAllCases: false,
+  });
+}
+
+export async function getAssignedFollowUpQueue(
+  userId: string,
+  churchId: string,
+): Promise<FollowUpQueryResult<FollowUpQueue>> {
+  const supabase = await createClient();
+  const week = getCurrentReportWeek();
+  const baseQueue = emptyQueue();
+
+  const { data: casesData, error: casesError } = await supabase
+    .from("follow_up_cases")
+    .select(
+      "id, company_id, company_member_id, absentee_record_id, status, assigned_to, date_contacted, next_action, notes, resolved_at, created_at, updated_at",
+    )
+    .eq("church_id", churchId)
+    .eq("assigned_to", userId)
+    .neq("status", "resolved")
+    .order("created_at", { ascending: false })
+    .returns<FollowUpCaseRow[]>();
+
+  if (casesError) {
+    return {
+      data: baseQueue,
+      error: toErrorMessage(
+        "Unable to load assigned follow-up cases",
+        casesError.message,
+      ),
+    };
+  }
+
+  const cases = casesData ?? [];
+
+  if (cases.length === 0) {
+    return {
+      data: baseQueue,
+      error: null,
+    };
+  }
+
+  const companyIds = uniqueIds(cases.map((followUpCase) => followUpCase.company_id));
+  const companyMemberIds = uniqueIds(
+    cases.map((followUpCase) => followUpCase.company_member_id),
+  );
+  const absenteeRecordIds = uniqueIds(
+    cases.map((followUpCase) => followUpCase.absentee_record_id),
+  );
+
+  const [
+    { data: companiesData, error: companiesError },
+    { data: membersData, error: membersError },
+    { data: absenteeRecordsData, error: absenteeRecordsError },
+  ] = await Promise.all([
+    supabase
+      .from("companies")
+      .select("id, name")
+      .eq("church_id", churchId)
+      .in("id", companyIds)
+      .returns<CompanyRow[]>(),
+    supabase
+      .from("company_members")
+      .select("id, full_name")
+      .eq("church_id", churchId)
+      .in("id", companyMemberIds)
+      .returns<CompanyMemberRow[]>(),
+    absenteeRecordIds.length > 0
+      ? supabase
+          .from("absentee_records")
+          .select(
+            "id, weekly_report_id, company_id, company_member_id, absence_date, reason, reason_note, created_at",
+          )
+          .eq("church_id", churchId)
+          .in("id", absenteeRecordIds)
+          .returns<AbsenteeRecordRow[]>()
+      : { data: [], error: null },
+  ]);
+
+  const absenteeRecords = absenteeRecordsData ?? [];
+  const weeklyReportIds = uniqueIds(
+    absenteeRecords.map((record) => record.weekly_report_id),
+  );
+  const { data: reportsData, error: reportsError } =
+    weeklyReportIds.length > 0
+      ? await supabase
+          .from("weekly_reports")
+          .select("id, status, report_week_start, report_week_end")
+          .eq("church_id", churchId)
+          .in("id", weeklyReportIds)
+          .returns<WeeklyReportRow[]>()
+      : { data: [], error: null };
+
+  const companiesById = new Map(
+    (companiesData ?? []).map((company) => [company.id, company]),
+  );
+  const membersById = new Map((membersData ?? []).map((member) => [member.id, member]));
+  const absenteeRecordsById = new Map(
+    absenteeRecords.map((record) => [record.id, record]),
+  );
+  const reportsById = new Map((reportsData ?? []).map((report) => [report.id, report]));
+
+  const items = cases
+    .map((followUpCase) => {
+      const absenteeRecord = followUpCase.absentee_record_id
+        ? absenteeRecordsById.get(followUpCase.absentee_record_id)
+        : null;
+      const report = absenteeRecord
+        ? reportsById.get(absenteeRecord.weekly_report_id)
+        : null;
+      const contextDate =
+        absenteeRecord?.absence_date ??
+        followUpCase.date_contacted ??
+        followUpCase.created_at?.slice(0, 10) ??
+        week.reportWeekStart;
+
+      return {
+        absenteeRecordId:
+          followUpCase.absentee_record_id ?? `case-${followUpCase.id}`,
+        followUpCaseId: followUpCase.id,
+        contextDateLabel: absenteeRecord ? "Absence date" : "Case opened",
+        memberName:
+          membersById.get(followUpCase.company_member_id)?.full_name ??
+          "Company member",
+        companyName: companiesById.get(followUpCase.company_id)?.name ?? "Company",
+        absenceDate: contextDate,
+        reason: absenteeRecord?.reason ?? "no_reason_given",
+        reasonNote: absenteeRecord?.reason_note ?? null,
+        weeklyReportStatus: report?.status ?? "unknown",
+        reportWeekStart: report?.report_week_start ?? absenteeRecord?.absence_date ?? contextDate,
+        reportWeekEnd: report?.report_week_end ?? absenteeRecord?.absence_date ?? contextDate,
+        followUpStatus: followUpCase.status,
+        hasFollowUpCase: true,
+        assignedUserId: followUpCase.assigned_to,
+        assignedUserName: "Assigned to you",
+        lastContactDate: followUpCase.date_contacted,
+        nextAction: followUpCase.next_action,
+        notes: followUpCase.notes,
+        resolvedAt: followUpCase.resolved_at,
+        followUpCaseCreatedAt: followUpCase.created_at,
+        createdAt: followUpCase.created_at,
+        isCurrentWeek: report?.report_week_start === week.reportWeekStart,
+        canUpdateCase: true,
+      } satisfies FollowUpQueueItem;
+    })
+    .sort((first, second) => {
+      if (first.isCurrentWeek !== second.isCurrentWeek) {
+        return first.isCurrentWeek ? -1 : 1;
+      }
+
+      return second.absenceDate.localeCompare(first.absenceDate);
+    });
+
+  return {
+    data: {
+      week,
+      items,
+      summary: summarize(items),
+    },
+    error:
+      [
+        companiesError
+          ? toErrorMessage("Unable to load follow-up companies", companiesError.message)
+          : null,
+        membersError
+          ? toErrorMessage("Unable to load follow-up members", membersError.message)
+          : null,
+        absenteeRecordsError
+          ? toErrorMessage(
+              "Unable to load assigned follow-up absentee details",
+              absenteeRecordsError.message,
+            )
+          : null,
+        reportsError
+          ? toErrorMessage("Unable to load assigned follow-up report details", reportsError.message)
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || null,
+  };
 }
 
 export async function getFollowUpCreateOptions(

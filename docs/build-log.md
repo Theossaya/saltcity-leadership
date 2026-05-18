@@ -281,3 +281,17 @@ The admin-only follow-up case creation foundation was added without changing the
 - Added zod validation and a Server Action that uses the authenticated Supabase server client, prevents duplicate active cases for the same absentee record where visible, revalidates `/follow-up` and `/dashboard`, and returns success/error notices.
 - Added RLS-respecting assignee option loading for active leaders in the church.
 - Left case updates, contact tracking, status changes, reassignment after creation, deletion, notifications, and task auto-creation out of scope.
+
+## Day 11 Morning — Follow-up case status update foundation
+
+The assigned-user/admin follow-up progress update foundation was added without changing the core schema:
+
+- Added compact progress updates on `/follow-up` for church admins, super admins, and leaders assigned to the existing follow-up case.
+- Created `supabase/sql/015_follow_up_case_status_update_grants.sql` with column-limited authenticated update access for `status`, `date_contacted`, `next_action`, `notes`, and `resolved_at`, plus a strict same-church admin-or-assigned-user update policy.
+- Added validation and a Server Action that updates only progress fields, sets `resolved_at` only when resolving, clears it otherwise, and revalidates `/follow-up` and `/dashboard`.
+- Included assigned follow-up cases for assigned leaders even when the case belongs to a company they do not lead, including company leaders assigned outside their own company.
+- Added read-only context policies so assigned leaders can see the linked active follow-up case, company, company member, absentee context, and weekly report context needed to make contact.
+- Avoided post-update reads so assigned leaders resolving a case are not shown a false failure after a successful update.
+- Preserved richer company queue report and absence context when merging duplicate company and assigned follow-up items.
+- Kept company leaders who are not assigned to the case read-only.
+- Left reassignment, deletion, priority changes, broader write permissions, notifications, and task auto-creation out of scope.
