@@ -295,3 +295,13 @@ The assigned-user/admin follow-up progress update foundation was added without c
 - Preserved richer company queue report and absence context when merging duplicate company and assigned follow-up items.
 - Kept company leaders who are not assigned to the case read-only.
 - Left reassignment, deletion, priority changes, broader write permissions, notifications, and task auto-creation out of scope.
+
+## Day 11 Afternoon — Follow-up history / resolved cases visibility
+
+Resolved follow-up history was added without changing the core schema or adding write actions:
+
+- Added a read-only "Recently resolved" section below the active `/follow-up` queue so admins and relevant leaders can confirm completed follow-up work.
+- Added role-aware resolved-case query helpers for church admins, company-led cases, and cases assigned to the signed-in leader, with de-duplication when company and assigned visibility overlap.
+- Kept active cases first and used separate history cards with completion context, including person, company, original absence context, assigned leader, contacted date, resolved date, final notes, and next action when visible.
+- Created `supabase/sql/016_follow_up_history_read_policies.sql` because the Day 11 Morning assigned-user policies exposed active assigned cases only; the new file is SELECT-only and lets assigned leaders read resolved cases assigned to them plus minimum linked context.
+- Added no new update actions, no reassignment, no priority changes, no deletion, no notifications, no task auto-creation, no service role use, and no broader update permissions.

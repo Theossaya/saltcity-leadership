@@ -22,6 +22,7 @@ export type FollowUpQueueItem = {
   reportWeekStart: string;
   reportWeekEnd: string;
   followUpStatus: FollowUpStatus;
+  priority: string | null;
   hasFollowUpCase: boolean;
   assignedUserId: string | null;
   assignedUserName: string | null;
@@ -99,6 +100,7 @@ type FollowUpCaseRow = {
   absentee_record_id: string | null;
   status: Exclude<FollowUpStatus, "not_started">;
   assigned_to: string | null;
+  priority: string | null;
   date_contacted: string | null;
   next_action: string | null;
   notes: string | null;
@@ -118,6 +120,7 @@ type MembershipOptionRow = {
 };
 
 const RECENT_WEEK_COUNT = 4;
+const RESOLVED_HISTORY_LIMIT = 30;
 
 const emptyCreateOptions: FollowUpCreateOptions = {
   assignees: [],
@@ -321,7 +324,7 @@ async function getFollowUpQueue(
     supabase
       .from("follow_up_cases")
       .select(
-        "id, company_id, company_member_id, absentee_record_id, status, assigned_to, date_contacted, next_action, notes, resolved_at, created_at, updated_at",
+        "id, company_id, company_member_id, absentee_record_id, status, assigned_to, priority, date_contacted, next_action, notes, resolved_at, created_at, updated_at",
       )
       .eq("church_id", churchId)
       .in("absentee_record_id", absenteeRecordIds)
@@ -387,6 +390,7 @@ async function getFollowUpQueue(
         reportWeekStart: report?.report_week_start ?? record.absence_date,
         reportWeekEnd: report?.report_week_end ?? record.absence_date,
         followUpStatus: followUpCase?.status ?? "not_started",
+        priority: followUpCase?.priority ?? null,
         hasFollowUpCase: Boolean(followUpCase),
         assignedUserId: followUpCase?.assigned_to ?? null,
         assignedUserName: followUpCase?.assigned_to
@@ -478,7 +482,7 @@ export async function getAssignedFollowUpQueue(
   const { data: casesData, error: casesError } = await supabase
     .from("follow_up_cases")
     .select(
-      "id, company_id, company_member_id, absentee_record_id, status, assigned_to, date_contacted, next_action, notes, resolved_at, created_at, updated_at",
+      "id, company_id, company_member_id, absentee_record_id, status, assigned_to, priority, date_contacted, next_action, notes, resolved_at, created_at, updated_at",
     )
     .eq("church_id", churchId)
     .eq("assigned_to", userId)
@@ -595,6 +599,7 @@ export async function getAssignedFollowUpQueue(
         reportWeekStart: report?.report_week_start ?? absenteeRecord?.absence_date ?? contextDate,
         reportWeekEnd: report?.report_week_end ?? absenteeRecord?.absence_date ?? contextDate,
         followUpStatus: followUpCase.status,
+        priority: followUpCase.priority,
         hasFollowUpCase: true,
         assignedUserId: followUpCase.assigned_to,
         assignedUserName: "Assigned to you",
@@ -643,6 +648,261 @@ export async function getAssignedFollowUpQueue(
         .filter(Boolean)
         .join(" ") || null,
   };
+}
+
+async function getResolvedFollowUpQueue(
+  churchId: string,
+  options: {
+    currentUserId?: string;
+    companyIds?: string[];
+    assignedOnly?: boolean;
+  } = {},
+): Promise<FollowUpQueryResult<FollowUpQueue>> {
+  const supabase = await createClient();
+  const week = getCurrentReportWeek();
+  const baseQueue = emptyQueue();
+
+  if (options.companyIds && options.companyIds.length === 0) {
+    return {
+      data: baseQueue,
+      error: null,
+    };
+  }
+
+  let casesQuery = supabase
+    .from("follow_up_cases")
+    .select(
+      "id, company_id, company_member_id, absentee_record_id, status, assigned_to, priority, date_contacted, next_action, notes, resolved_at, created_at, updated_at",
+    )
+    .eq("church_id", churchId)
+    .eq("status", "resolved")
+    .order("resolved_at", { ascending: false, nullsFirst: false })
+    .order("updated_at", { ascending: false })
+    .limit(RESOLVED_HISTORY_LIMIT);
+
+  if (options.assignedOnly) {
+    casesQuery = casesQuery.eq("assigned_to", options.currentUserId ?? "");
+  } else if (options.companyIds) {
+    casesQuery = casesQuery.in("company_id", options.companyIds);
+  }
+
+  const { data: casesData, error: casesError } =
+    await casesQuery.returns<FollowUpCaseRow[]>();
+
+  if (casesError) {
+    return {
+      data: baseQueue,
+      error: toErrorMessage(
+        "Unable to load resolved follow-up cases",
+        casesError.message,
+      ),
+    };
+  }
+
+  const cases = casesData ?? [];
+
+  if (cases.length === 0) {
+    return {
+      data: baseQueue,
+      error: null,
+    };
+  }
+
+  const companyIds = uniqueIds(cases.map((followUpCase) => followUpCase.company_id));
+  const companyMemberIds = uniqueIds(
+    cases.map((followUpCase) => followUpCase.company_member_id),
+  );
+  const absenteeRecordIds = uniqueIds(
+    cases.map((followUpCase) => followUpCase.absentee_record_id),
+  );
+  const assignedUserIds = uniqueIds(
+    cases.map((followUpCase) => followUpCase.assigned_to),
+  );
+
+  const [
+    { data: companiesData, error: companiesError },
+    { data: membersData, error: membersError },
+    { data: absenteeRecordsData, error: absenteeRecordsError },
+    { data: profilesData, error: profilesError },
+  ] = await Promise.all([
+    supabase
+      .from("companies")
+      .select("id, name")
+      .eq("church_id", churchId)
+      .in("id", companyIds)
+      .returns<CompanyRow[]>(),
+    supabase
+      .from("company_members")
+      .select("id, full_name")
+      .eq("church_id", churchId)
+      .in("id", companyMemberIds)
+      .returns<CompanyMemberRow[]>(),
+    absenteeRecordIds.length > 0
+      ? supabase
+          .from("absentee_records")
+          .select(
+            "id, weekly_report_id, company_id, company_member_id, absence_date, reason, reason_note, created_at",
+          )
+          .eq("church_id", churchId)
+          .in("id", absenteeRecordIds)
+          .returns<AbsenteeRecordRow[]>()
+      : { data: [], error: null },
+    assignedUserIds.length > 0
+      ? supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", assignedUserIds)
+          .returns<ProfileRow[]>()
+      : { data: [], error: null },
+  ]);
+
+  const absenteeRecords = absenteeRecordsData ?? [];
+  const weeklyReportIds = uniqueIds(
+    absenteeRecords.map((record) => record.weekly_report_id),
+  );
+  const { data: reportsData, error: reportsError } =
+    weeklyReportIds.length > 0
+      ? await supabase
+          .from("weekly_reports")
+          .select("id, status, report_week_start, report_week_end")
+          .eq("church_id", churchId)
+          .in("id", weeklyReportIds)
+          .returns<WeeklyReportRow[]>()
+      : { data: [], error: null };
+
+  const companiesById = new Map(
+    (companiesData ?? []).map((company) => [company.id, company]),
+  );
+  const membersById = new Map((membersData ?? []).map((member) => [member.id, member]));
+  const absenteeRecordsById = new Map(
+    absenteeRecords.map((record) => [record.id, record]),
+  );
+  const reportsById = new Map((reportsData ?? []).map((report) => [report.id, report]));
+  const profileNames = new Map(
+    (profilesData ?? []).map((profile) => [
+      profile.id,
+      profile.full_name ?? "Assigned leader",
+    ]),
+  );
+
+  const items = cases.map((followUpCase) => {
+    const absenteeRecord = followUpCase.absentee_record_id
+      ? absenteeRecordsById.get(followUpCase.absentee_record_id)
+      : null;
+    const report = absenteeRecord
+      ? reportsById.get(absenteeRecord.weekly_report_id)
+      : null;
+    const contextDate =
+      absenteeRecord?.absence_date ??
+      followUpCase.date_contacted ??
+      followUpCase.resolved_at?.slice(0, 10) ??
+      followUpCase.created_at?.slice(0, 10) ??
+      week.reportWeekStart;
+
+    return {
+      absenteeRecordId:
+        followUpCase.absentee_record_id ?? `case-${followUpCase.id}`,
+      followUpCaseId: followUpCase.id,
+      contextDateLabel: absenteeRecord ? "Absence date" : "Case opened",
+      memberName:
+        membersById.get(followUpCase.company_member_id)?.full_name ??
+        "Company member",
+      companyName: companiesById.get(followUpCase.company_id)?.name ?? "Company",
+      absenceDate: contextDate,
+      reason: absenteeRecord?.reason ?? "no_reason_given",
+      reasonNote: absenteeRecord?.reason_note ?? null,
+      weeklyReportStatus: report?.status ?? "unknown",
+      reportWeekStart: report?.report_week_start ?? absenteeRecord?.absence_date ?? contextDate,
+      reportWeekEnd: report?.report_week_end ?? absenteeRecord?.absence_date ?? contextDate,
+      followUpStatus: followUpCase.status,
+      priority: followUpCase.priority,
+      hasFollowUpCase: true,
+      assignedUserId: followUpCase.assigned_to,
+      assignedUserName: followUpCase.assigned_to
+        ? profileNames.get(followUpCase.assigned_to) ??
+          (followUpCase.assigned_to === options.currentUserId
+            ? "Assigned to you"
+            : null)
+        : null,
+      lastContactDate: followUpCase.date_contacted,
+      nextAction: followUpCase.next_action,
+      notes: followUpCase.notes,
+      resolvedAt: followUpCase.resolved_at,
+      followUpCaseCreatedAt: followUpCase.created_at,
+      createdAt: followUpCase.created_at,
+      isCurrentWeek: report?.report_week_start === week.reportWeekStart,
+      canUpdateCase: false,
+    } satisfies FollowUpQueueItem;
+  });
+
+  return {
+    data: {
+      week,
+      items,
+      summary: summarize(items),
+    },
+    error:
+      [
+        companiesError
+          ? toErrorMessage("Unable to load resolved follow-up companies", companiesError.message)
+          : null,
+        membersError
+          ? toErrorMessage("Unable to load resolved follow-up members", membersError.message)
+          : null,
+        absenteeRecordsError
+          ? toErrorMessage(
+              "Unable to load resolved follow-up absentee details",
+              absenteeRecordsError.message,
+            )
+          : null,
+        profilesError
+          ? toErrorMessage("Unable to load resolved follow-up assignees", profilesError.message)
+          : null,
+        reportsError
+          ? toErrorMessage("Unable to load resolved follow-up report details", reportsError.message)
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || null,
+  };
+}
+
+export async function getAdminResolvedFollowUpQueue(
+  churchId: string,
+  userId?: string,
+): Promise<FollowUpQueryResult<FollowUpQueue>> {
+  return getResolvedFollowUpQueue(churchId, {
+    currentUserId: userId,
+  });
+}
+
+export async function getCompanyResolvedFollowUpQueue(
+  userId: string,
+  churchId: string,
+): Promise<FollowUpQueryResult<FollowUpQueue>> {
+  const assignedCompanies = await getAssignedCompanyIds(userId, churchId);
+
+  if (assignedCompanies.error) {
+    return {
+      data: emptyQueue(),
+      error: assignedCompanies.error,
+    };
+  }
+
+  return getResolvedFollowUpQueue(churchId, {
+    currentUserId: userId,
+    companyIds: assignedCompanies.companyIds,
+  });
+}
+
+export async function getAssignedResolvedFollowUpQueue(
+  userId: string,
+  churchId: string,
+): Promise<FollowUpQueryResult<FollowUpQueue>> {
+  return getResolvedFollowUpQueue(churchId, {
+    currentUserId: userId,
+    assignedOnly: true,
+  });
 }
 
 export async function getFollowUpCreateOptions(
