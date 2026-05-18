@@ -11,14 +11,20 @@ import {
   absenteeRecordRemoveSchema,
 } from "@/lib/validation/absentees";
 import {
-  createDraftWeeklyReportUpdateSchema,
+  draftWeeklyReportUpdateBaseSchema,
   submitWeeklyReportSchema,
+  weeklyReportReviewSchema,
 } from "@/lib/validation/reports";
 
 const START_DRAFT_ERROR_PATH = "/reports?error=unable-to-start-draft";
 const UPDATE_DRAFT_ERROR_PATH = "/reports?error=unable-to-update-draft";
 const SUBMIT_REPORT_ERROR_PATH = "/reports?error=unable-to-submit-report";
 const UPDATE_ABSENTEES_ERROR_PATH = "/reports?error=unable-to-update-absentees";
+const ABSENTEE_MISSING_MEMBER_ERROR_PATH = "/reports?error=missing-absent-member";
+const ABSENTEE_INVALID_DATE_ERROR_PATH = "/reports?error=invalid-absence-date";
+const ABSENTEE_INACTIVE_DRAFT_ERROR_PATH = "/reports?error=report-no-longer-editable";
+const ABSENTEE_DUPLICATE_ERROR_PATH = "/reports?error=duplicate-absentee";
+const REVIEW_REPORT_ERROR_PATH = "/reports?error=unable-to-review-report";
 
 type AssignedCompanyRow = {
   id: string;
@@ -41,10 +47,11 @@ type DraftReportRow = {
   status: string;
 };
 
-type SubmittableDraftReportRow = DraftReportRow & {
-  total_members: number;
-  present_count: number;
-  absent_count: number;
+type ReviewableReportRow = {
+  id: string;
+  company_id: string;
+  church_id: string;
+  status: string;
 };
 
 function canStartReportDraft(role: string | null) {
@@ -63,6 +70,10 @@ function canUpdateAbsentees(role: string | null) {
   return role === "company_leader" || role === "assistant_leader";
 }
 
+function canReviewReport(role: string | null) {
+  return role === "church_admin" || role === "super_admin";
+}
+
 function getFormString(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -76,6 +87,32 @@ function isUuid(value: string | null): value is string {
         value,
       ),
   );
+}
+
+function getComputedAttendanceCounts(
+  totalMembers: number,
+  absenteeRecordCount: number,
+) {
+  const absentCount = Math.max(0, absenteeRecordCount);
+
+  return {
+    absentCount,
+    presentCount: Math.max(0, totalMembers - absentCount),
+  };
+}
+
+function isServiceDateInReportWeek(
+  value: string,
+  reportWeekStart: string,
+  reportWeekEnd: string,
+) {
+  if (value < reportWeekStart || value > reportWeekEnd) {
+    return false;
+  }
+
+  const day = new Date(`${value}T00:00:00.000Z`).getUTCDay();
+
+  return day === 0 || day === 3 || day === 5;
 }
 
 export async function startWeeklyReportDraft(formData: FormData) {
@@ -189,8 +226,11 @@ export async function updateDraftWeeklyReport(formData: FormData) {
     redirect(UPDATE_DRAFT_ERROR_PATH);
   }
 
-  const [{ data: report, error: reportError }, { count, error: countError }] =
-    await Promise.all([
+  const [
+    { data: report, error: reportError },
+    { count, error: countError },
+    { count: absenteeRecordCount, error: absenteeRecordCountError },
+  ] = await Promise.all([
       supabase
         .from("weekly_reports")
         .select("id, company_id, church_id, report_week_start, report_week_end, status")
@@ -207,18 +247,30 @@ export async function updateDraftWeeklyReport(formData: FormData) {
         .eq("church_id", churchId)
         .eq("company_id", company.id)
         .eq("status", "active"),
+      supabase
+        .from("absentee_records")
+        .select("id", { count: "exact", head: true })
+        .eq("church_id", churchId)
+        .eq("company_id", company.id)
+        .eq("weekly_report_id", reportId),
     ]);
 
-  if (reportError || countError || !report) {
+  if (reportError || !report) {
+    redirect(ABSENTEE_INACTIVE_DRAFT_ERROR_PATH);
+  }
+
+  if (countError || absenteeRecordCountError) {
     redirect(UPDATE_DRAFT_ERROR_PATH);
   }
 
   const totalMembers = count ?? 0;
-  const validation = createDraftWeeklyReportUpdateSchema(totalMembers).safeParse({
+  const attendanceCounts = getComputedAttendanceCounts(
+    totalMembers,
+    absenteeRecordCount ?? 0,
+  );
+  const validation = draftWeeklyReportUpdateBaseSchema.safeParse({
     reportId,
     companyId,
-    presentCount: formData.get("presentCount"),
-    absentCount: formData.get("absentCount"),
     newVisitorsCount: formData.get("newVisitorsCount"),
     generalNotes: formData.get("generalNotes"),
     supportNeeded: formData.get("supportNeeded"),
@@ -239,8 +291,8 @@ export async function updateDraftWeeklyReport(formData: FormData) {
     .from("weekly_reports")
     .update({
       total_members: totalMembers,
-      present_count: values.presentCount,
-      absent_count: values.absentCount,
+      present_count: attendanceCounts.presentCount,
+      absent_count: attendanceCounts.absentCount,
       new_visitors_count: values.newVisitorsCount,
       general_notes: values.generalNotes ?? null,
       support_needed: values.supportNeeded ?? null,
@@ -305,16 +357,14 @@ export async function submitWeeklyReport(formData: FormData) {
   ] = await Promise.all([
     supabase
       .from("weekly_reports")
-      .select(
-        "id, company_id, church_id, report_week_start, report_week_end, status, total_members, present_count, absent_count",
-      )
+      .select("id, company_id, church_id, report_week_start, report_week_end, status")
       .eq("church_id", churchId)
       .eq("company_id", company.id)
       .eq("id", reportId)
       .eq("report_week_start", reportWeekStart)
       .eq("report_week_end", reportWeekEnd)
       .eq("status", "draft")
-      .maybeSingle<SubmittableDraftReportRow>(),
+      .maybeSingle<DraftReportRow>(),
     supabase
       .from("company_members")
       .select("id", { count: "exact", head: true })
@@ -329,18 +379,22 @@ export async function submitWeeklyReport(formData: FormData) {
       .eq("weekly_report_id", reportId),
   ]);
 
-  if (reportError || countError || absenteeRecordCountError || !report) {
+  if (reportError || !report) {
+    redirect(ABSENTEE_INACTIVE_DRAFT_ERROR_PATH);
+  }
+
+  if (countError || absenteeRecordCountError) {
     redirect(SUBMIT_REPORT_ERROR_PATH);
   }
 
   const totalMembers = count ?? 0;
-  const draftValidation = createDraftWeeklyReportUpdateSchema(
+  const attendanceCounts = getComputedAttendanceCounts(
     totalMembers,
-  ).safeParse({
+    absenteeRecordCount ?? 0,
+  );
+  const draftValidation = draftWeeklyReportUpdateBaseSchema.safeParse({
     reportId,
     companyId,
-    presentCount: formData.get("presentCount"),
-    absentCount: formData.get("absentCount"),
     newVisitorsCount: formData.get("newVisitorsCount"),
     generalNotes: formData.get("generalNotes"),
     supportNeeded: formData.get("supportNeeded"),
@@ -350,8 +404,6 @@ export async function submitWeeklyReport(formData: FormData) {
   const submitValidation = submitWeeklyReportSchema.safeParse({
     reportId,
     companyId,
-    presentCount: formData.get("presentCount"),
-    absentCount: formData.get("absentCount"),
     newVisitorsCount: formData.get("newVisitorsCount"),
     generalNotes: formData.get("generalNotes"),
     supportNeeded: formData.get("supportNeeded"),
@@ -372,8 +424,7 @@ export async function submitWeeklyReport(formData: FormData) {
     report.status !== "draft" ||
     report.report_week_start !== reportWeekStart ||
     report.report_week_end !== reportWeekEnd ||
-    values.presentCount + values.absentCount !== totalMembers ||
-    values.absentCount !== (absenteeRecordCount ?? 0)
+    attendanceCounts.presentCount + attendanceCounts.absentCount !== totalMembers
   ) {
     redirect(SUBMIT_REPORT_ERROR_PATH);
   }
@@ -382,8 +433,8 @@ export async function submitWeeklyReport(formData: FormData) {
     .from("weekly_reports")
     .update({
       total_members: totalMembers,
-      present_count: values.presentCount,
-      absent_count: values.absentCount,
+      present_count: attendanceCounts.presentCount,
+      absent_count: attendanceCounts.absentCount,
       new_visitors_count: values.newVisitorsCount,
       general_notes: values.generalNotes ?? null,
       support_needed: values.supportNeeded ?? null,
@@ -427,6 +478,71 @@ export async function submitWeeklyReport(formData: FormData) {
   redirect("/reports?submitted=report");
 }
 
+export async function reviewWeeklyReport(formData: FormData) {
+  const { user, primaryRole, churchId } = await getCurrentUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  if (!canReviewReport(primaryRole) || !churchId) {
+    redirect(REVIEW_REPORT_ERROR_PATH);
+  }
+
+  const validation = weeklyReportReviewSchema.safeParse({
+    reportId: formData.get("reportId"),
+    reviewStatus: formData.get("reviewStatus"),
+    reviewerNotes: formData.get("reviewerNotes"),
+  });
+
+  if (!validation.success) {
+    redirect(REVIEW_REPORT_ERROR_PATH);
+  }
+
+  const values = validation.data;
+  const supabase = await createClient();
+
+  const { data: report, error: reportError } = await supabase
+    .from("weekly_reports")
+    .select("id, company_id, church_id, status")
+    .eq("church_id", churchId)
+    .eq("id", values.reportId)
+    .eq("status", "submitted")
+    .maybeSingle<ReviewableReportRow>();
+
+  if (
+    reportError ||
+    !report ||
+    report.church_id !== churchId ||
+    report.status !== "submitted"
+  ) {
+    redirect(REVIEW_REPORT_ERROR_PATH);
+  }
+
+  const { error: updateError } = await supabase
+    .from("weekly_reports")
+    .update({
+      status: values.reviewStatus,
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+      reviewer_notes: values.reviewerNotes ?? null,
+    })
+    .eq("church_id", churchId)
+    .eq("company_id", report.company_id)
+    .eq("id", report.id)
+    .eq("status", "submitted")
+    .select("id")
+    .single();
+
+  if (updateError) {
+    redirect(REVIEW_REPORT_ERROR_PATH);
+  }
+
+  revalidatePath("/reports");
+  revalidatePath("/dashboard");
+  redirect("/reports?reviewed=report");
+}
+
 export async function addAbsenteeRecord(formData: FormData) {
   const { user, primaryRole, churchId } = await getCurrentUser();
 
@@ -438,28 +554,32 @@ export async function addAbsenteeRecord(formData: FormData) {
     redirect(UPDATE_ABSENTEES_ERROR_PATH);
   }
 
+  const companyMemberId = getFormString(formData, "companyMemberId");
+  const absenceDate = getFormString(formData, "absenceDate");
+
+  if (!isUuid(companyMemberId)) {
+    redirect(ABSENTEE_MISSING_MEMBER_ERROR_PATH);
+  }
+
   const validation = absenteeRecordCreateSchema.safeParse({
     reportId: formData.get("reportId"),
     companyId: formData.get("companyId"),
-    companyMemberId: formData.get("companyMemberId"),
-    absenceDate: formData.get("absenceDate"),
+    companyMemberId,
+    absenceDate,
     reason: formData.get("reason"),
     reasonNote: formData.get("reasonNote"),
   });
 
   if (!validation.success) {
-    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+    redirect(ABSENTEE_INVALID_DATE_ERROR_PATH);
   }
 
   const values = validation.data;
   const supabase = await createClient();
   const { reportWeekStart, reportWeekEnd } = getCurrentReportWeek();
 
-  if (
-    values.absenceDate < reportWeekStart ||
-    values.absenceDate > reportWeekEnd
-  ) {
-    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  if (!isServiceDateInReportWeek(values.absenceDate, reportWeekStart, reportWeekEnd)) {
+    redirect(ABSENTEE_INVALID_DATE_ERROR_PATH);
   }
 
   const { data: company, error: companyError } = await supabase
@@ -479,6 +599,7 @@ export async function addAbsenteeRecord(formData: FormData) {
   const [
     { data: report, error: reportError },
     { data: companyMember, error: companyMemberError },
+    { data: duplicateAbsenteeRecord, error: duplicateAbsenteeRecordError },
   ] = await Promise.all([
     supabase
       .from("weekly_reports")
@@ -498,10 +619,30 @@ export async function addAbsenteeRecord(formData: FormData) {
       .eq("id", values.companyMemberId)
       .eq("status", "active")
       .maybeSingle<ActiveCompanyMemberRow>(),
+    supabase
+      .from("absentee_records")
+      .select("id")
+      .eq("church_id", churchId)
+      .eq("company_id", company.id)
+      .eq("weekly_report_id", values.reportId)
+      .eq("company_member_id", values.companyMemberId)
+      .maybeSingle<{ id: string }>(),
   ]);
 
-  if (reportError || companyMemberError || !report || !companyMember) {
+  if (reportError || !report) {
+    redirect(ABSENTEE_INACTIVE_DRAFT_ERROR_PATH);
+  }
+
+  if (companyMemberError || !companyMember) {
+    redirect(ABSENTEE_MISSING_MEMBER_ERROR_PATH);
+  }
+
+  if (duplicateAbsenteeRecordError) {
     redirect(UPDATE_ABSENTEES_ERROR_PATH);
+  }
+
+  if (duplicateAbsenteeRecord) {
+    redirect(ABSENTEE_DUPLICATE_ERROR_PATH);
   }
 
   const { error: insertError } = await supabase.from("absentee_records").insert({
@@ -515,6 +656,30 @@ export async function addAbsenteeRecord(formData: FormData) {
     streak_count: 1,
     follow_up_required: false,
   });
+
+  if (insertError?.code === "23505") {
+    redirect(ABSENTEE_DUPLICATE_ERROR_PATH);
+  }
+
+  if (insertError?.code === "23503") {
+    const details = `${insertError.details ?? ""} ${insertError.message ?? ""}`;
+
+    if (details.includes("company_member_id")) {
+      redirect(ABSENTEE_MISSING_MEMBER_ERROR_PATH);
+    }
+
+    if (details.includes("weekly_report_id")) {
+      redirect(ABSENTEE_INACTIVE_DRAFT_ERROR_PATH);
+    }
+  }
+
+  if (insertError?.code === "23514") {
+    redirect(ABSENTEE_INVALID_DATE_ERROR_PATH);
+  }
+
+  if (insertError?.code === "42501") {
+    redirect(ABSENTEE_INACTIVE_DRAFT_ERROR_PATH);
+  }
 
   if (insertError) {
     redirect(UPDATE_ABSENTEES_ERROR_PATH);
@@ -576,7 +741,7 @@ export async function removeAbsenteeRecord(formData: FormData) {
     .maybeSingle<DraftReportRow>();
 
   if (reportError || !report) {
-    redirect(UPDATE_ABSENTEES_ERROR_PATH);
+    redirect(ABSENTEE_INACTIVE_DRAFT_ERROR_PATH);
   }
 
   const { error: deleteError } = await supabase

@@ -38,36 +38,13 @@ using (
   )
 );
 
-create policy "weekly_reports_assigned_resolved_follow_up_select"
-on public.weekly_reports for select
-using (
-  auth.role() = 'authenticated'
-  and public.current_user_has_role(
-    church_id,
-    array[
-      'super_admin',
-      'church_admin',
-      'company_leader',
-      'assistant_leader',
-      'unit_leader',
-      'general_leader'
-    ]
-  )
-  and exists (
-    select 1
-    from public.absentee_records ar
-    join public.follow_up_cases fuc
-      on fuc.absentee_record_id = ar.id
-      and fuc.church_id = ar.church_id
-      and fuc.company_id = ar.company_id
-      and fuc.company_member_id = ar.company_member_id
-    where ar.weekly_report_id = weekly_reports.id
-      and ar.church_id = weekly_reports.church_id
-      and ar.company_id = weekly_reports.company_id
-      and fuc.assigned_to = auth.uid()
-      and fuc.status = 'resolved'
-  )
-);
+-- Do not recreate a weekly_reports assigned-user policy that queries
+-- absentee_records. The current-week absentee insert policy reads
+-- weekly_reports, and a weekly_reports policy that reads absentee_records
+-- creates an RLS recursion cycle. Assigned leaders can still see resolved
+-- follow-up context through the absentee record policy below, while report week
+-- context gracefully falls back in the application when weekly_reports is not
+-- visible.
 
 create policy "absentee_records_assigned_resolved_follow_up_select"
 on public.absentee_records for select

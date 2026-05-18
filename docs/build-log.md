@@ -305,3 +305,34 @@ Resolved follow-up history was added without changing the core schema or adding 
 - Kept active cases first and used separate history cards with completion context, including person, company, original absence context, assigned leader, contacted date, resolved date, final notes, and next action when visible.
 - Created `supabase/sql/016_follow_up_history_read_policies.sql` because the Day 11 Morning assigned-user policies exposed active assigned cases only; the new file is SELECT-only and lets assigned leaders read resolved cases assigned to them plus minimum linked context.
 - Added no new update actions, no reassignment, no priority changes, no deletion, no notifications, no task auto-creation, no service role use, and no broader update permissions.
+
+## Day 12 Morning — Admin report review foundation
+
+The admin-only weekly report review foundation was added without changing the core schema:
+
+- Added compact review controls on `/reports` for `church_admin` and `super_admin` users only.
+- Created `supabase/sql/017_report_review_grants.sql` with a column-limited authenticated update grant for `status`, `reviewed_by`, `reviewed_at`, and `reviewer_notes`, plus a strict same-church active admin review policy.
+- Added a trigger guard so submitted report content cannot be changed during review even though authenticated users have other column-limited report grants from earlier flows.
+- Added validation and a Server Action that marks submitted reports as `reviewed` or `flagged`, records reviewer notes when provided, and requires notes for flagged reports.
+- Kept counts, absentees, submitted content, reopening, deletion, notifications, service role usage, and RLS bypassing out of scope.
+
+## Day 12 UX fix — Guided member-based report attendance
+
+The company leader draft report flow was simplified without schema or RLS changes:
+
+- Reworked the draft report UI so leaders mark absent members instead of manually reconciling present and absent counts.
+- Made the attendance summary read-only, with present and absent totals computed from active company members and absentee records.
+- Updated draft save and submit actions to compute `present_count` and `absent_count` from the current active member count and linked absentee records while keeping `new_visitors_count`, notes, support needed, and testimonies editable.
+- Made absentee recording read as "Mark absent members," with already-marked members listed separately and duplicate absentee checks in the action.
+- Added clearer absentee error messages for missing member selection, invalid service date, inactive drafts, duplicates, and generic update failures.
+- Kept special programme configuration, schema changes, RLS changes, notifications, review changes, and follow-up changes out of scope.
+
+## Day 12 RLS fix — Absentee insert recursion
+
+The absentee insert runtime failure was fixed without weakening write protections:
+
+- Removed the assigned-user `weekly_reports` follow-up read policies from `015_follow_up_case_status_update_grants.sql` and `016_follow_up_history_read_policies.sql` because they queried `absentee_records` from `weekly_reports` RLS.
+- Added explicit cleanup drops for the obsolete assigned-user `weekly_reports` policies to `017_report_review_grants.sql` so already-migrated Supabase databases remove the recursive policies when the pending Day 12 migration runs.
+- Preserved the strict `008_absentee_record_grants.sql` insert/delete policies for current-week draft reports.
+- Kept assigned leader follow-up context available through follow-up cases, companies, company members, and absentee records, with report week context falling back in the app when `weekly_reports` is not visible.
+- Removed the temporary absentee insert console logging after identifying the RLS recursion root cause.

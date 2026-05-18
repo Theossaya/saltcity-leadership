@@ -70,6 +70,7 @@ function getCompanyStatusCopy(status: ReportStatus) {
 type ReportsPageProps = {
   searchParams?: Promise<{
     error?: string | string[];
+    reviewed?: string | string[];
     submitted?: string | string[];
     updated?: string | string[];
   }>;
@@ -258,13 +259,37 @@ function AbsenteesSection({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-foreground">
-            Absentee records
+            Mark absent members
           </h3>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {absenteeRecords.length} recorded. Keep this list gentle and accurate.
+            Everyone starts as present. Add only the members who were absent.
           </p>
         </div>
       </div>
+
+      {activeCompanyMembers.length > 0 ? (
+        <div className="rounded-lg border border-border/80 bg-white p-3 shadow-xs">
+          <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+            Present by default
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {selectableMembers.length > 0 ? (
+              selectableMembers.map((member) => (
+                <span
+                  key={member.id}
+                  className="rounded-full border border-border/80 bg-[#FBFAF8] px-3 py-1 text-xs font-medium text-foreground"
+                >
+                  {member.fullName}
+                </span>
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">
+                Every active member is marked absent.
+              </span>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {canEdit ? (
         <form action={addAbsenteeRecord} className="grid gap-4">
@@ -294,7 +319,7 @@ function AbsenteesSection({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="absenceDate">Absence date</Label>
+              <Label htmlFor="absenceDate">Service date</Label>
               <Input
                 id="absenceDate"
                 name="absenceDate"
@@ -305,6 +330,9 @@ function AbsenteesSection({
                 className="h-12 bg-background"
                 required
               />
+              <p className="text-xs text-muted-foreground">
+                Sunday 9:00-13:00, Wednesday 17:00-19:30, Friday 17:00-19:30.
+              </p>
             </div>
           </div>
 
@@ -343,7 +371,7 @@ function AbsenteesSection({
               className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
               disabled={selectableMembers.length === 0}
             >
-              Add absentee
+              Mark absent
             </Button>
           </div>
         </form>
@@ -362,6 +390,7 @@ function AbsenteesSection({
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const resolvedSearchParams = await searchParams;
   const errorParam = resolvedSearchParams?.error;
+  const reviewedParam = resolvedSearchParams?.reviewed;
   const submittedParam = resolvedSearchParams?.submitted;
   const updatedParam = resolvedSearchParams?.updated;
   const actionError =
@@ -376,6 +405,24 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const absenteesError =
     (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
     "unable-to-update-absentees";
+  const missingAbsentMemberError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "missing-absent-member";
+  const invalidAbsenceDateError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "invalid-absence-date";
+  const inactiveDraftError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "report-no-longer-editable";
+  const duplicateAbsenteeError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "duplicate-absentee";
+  const reviewError =
+    (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
+    "unable-to-review-report";
+  const reportReviewed =
+    (Array.isArray(reviewedParam) ? reviewedParam[0] : reviewedParam) ===
+    "report";
   const reportSubmitted =
     (Array.isArray(submittedParam) ? submittedParam[0] : submittedParam) ===
     "report";
@@ -435,6 +482,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           <QueryNotice message={overviewResult.error} />
         ) : null}
 
+        {reviewError ? (
+          <QueryNotice message="Report could not be reviewed." />
+        ) : null}
+
+        {reportReviewed ? (
+          <QueryNotice message="Report review saved." />
+        ) : null}
+
         <ReportWeekCard week={overview.week} />
 
         <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-5">
@@ -489,21 +544,21 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     const readOnlySubmittedAt = formatSubmittedDate(
       readOnlyReport?.submittedAt ?? null,
     );
-    const draftCountsAccountForTotal = draftReport
-      ? draftReport.presentCount + draftReport.absentCount ===
-        draftReport.totalMembers
-      : false;
-    const draftAbsenteeCountMatchesExpected = draftReport
-      ? draftReport.absentCount === workspace.absenteeCount
-      : false;
+    const computedTotalMembers =
+      workspace.activeCompanyMembers.length || draftReport?.totalMembers || 0;
+    const computedAbsentCount = workspace.absenteeCount;
+    const computedPresentCount = Math.max(
+      0,
+      computedTotalMembers - computedAbsentCount,
+    );
     const isDisplayedCompanyInactive =
       workspace.company?.status === "inactive";
     const reportCardBody = isDisplayedCompanyInactive
       ? "This company is inactive, so a weekly report draft cannot be started for it. Ask an admin to confirm your current company assignment."
       : workspace.reportStatus === "not_started"
-        ? "Start a draft for this week, then add counts, notes, and absentee records before submission."
+        ? "Start a draft for this week, then mark absent members and add report notes before submission."
         : workspace.reportStatus === "draft"
-          ? "Save this week's counts and basic notes before submitting for review."
+          ? "Mark only the members who were absent. The app will calculate present and absent totals for you."
           : workspace.reportStatus === "submitted"
             ? "This report has been submitted for review. Editing is disabled."
             : "This report is no longer editable in this pass. Review controls will be added later.";
@@ -515,15 +570,31 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         ) : null}
 
         {updateError ? (
-          <QueryNotice message="We could not save this draft report. Check the counts and try again, or ask an admin to confirm your company assignment." />
+          <QueryNotice message="We could not save this draft report. Try again or ask an admin to confirm your company assignment." />
         ) : null}
 
         {submitError ? (
-          <QueryNotice message="We could not submit this report. Confirm every member is accounted for, absentee records match the absent count, and try again." />
+          <QueryNotice message="We could not submit this report. Confirm the absent list is correct and try again." />
         ) : null}
 
         {absenteesError ? (
-          <QueryNotice message="We could not update absentee records. Confirm this is still a current week draft and try again." />
+          <QueryNotice message="We could not update the absentee list. Try again." />
+        ) : null}
+
+        {missingAbsentMemberError ? (
+          <QueryNotice message="Select the absent member before marking them absent." />
+        ) : null}
+
+        {invalidAbsenceDateError ? (
+          <QueryNotice message="Choose a valid service date for this report week." />
+        ) : null}
+
+        {inactiveDraftError ? (
+          <QueryNotice message="This report is no longer editable." />
+        ) : null}
+
+        {duplicateAbsenteeError ? (
+          <QueryNotice message="This member is already marked absent for this report." />
         ) : null}
 
         {draftUpdated ? (
@@ -531,7 +602,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         ) : null}
 
         {absenteesUpdated ? (
-          <QueryNotice message="Absentee records updated." />
+          <QueryNotice message="Absentee list updated." />
         ) : null}
 
         {reportSubmitted ? (
@@ -600,46 +671,31 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
                   <div className="rounded-lg border border-primary/15 bg-[#FBFAF8] px-4 py-3 shadow-xs">
                     <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-                      Total members
+                      Attendance summary
                     </p>
-                    <p className="mt-1 text-2xl font-semibold text-foreground">
-                      {draftReport.totalMembers}
-                    </p>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Total</p>
+                        <p className="text-2xl font-semibold text-foreground">
+                          {computedTotalMembers}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Present</p>
+                        <p className="text-2xl font-semibold text-foreground">
+                          {computedPresentCount}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Absent</p>
+                        <p className="text-2xl font-semibold text-foreground">
+                          {computedAbsentCount}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="grid gap-4 rounded-lg border border-border/80 bg-white p-4 shadow-xs sm:grid-cols-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="presentCount">Present count</Label>
-                      <Input
-                        id="presentCount"
-                        name="presentCount"
-                        type="number"
-                        inputMode="numeric"
-                        min="0"
-                        defaultValue={draftReport.presentCount}
-                        className="h-12 bg-background"
-                        required
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Label htmlFor="absentCount">Absent count</Label>
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {workspace.absenteeCount} absentee records for{" "}
-                          {draftReport.absentCount} expected
-                        </span>
-                      </div>
-                      <Input
-                        id="absentCount"
-                        name="absentCount"
-                        type="number"
-                        inputMode="numeric"
-                        min="0"
-                        defaultValue={draftReport.absentCount}
-                        className="h-12 bg-background"
-                        required
-                      />
-                    </div>
+                  <div className="grid gap-4 rounded-lg border border-border/80 bg-white p-4 shadow-xs">
                     <div className="grid gap-2">
                       <Label htmlFor="newVisitorsCount">New visitors</Label>
                       <Input
@@ -694,26 +750,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
                         Submit report
                       </h3>
                       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        Submitting locks this report for review. Editing will be
-                        disabled after submission.
+                        Make sure the absent list is correct, then submit for
+                        review.
                       </p>
                     </div>
-
-                    {!draftCountsAccountForTotal ? (
-                      <div className="rounded-lg border border-border/80 bg-white px-4 py-3 text-sm leading-6 text-muted-foreground">
-                        The saved draft counts do not account for every active
-                        member yet. Submission will validate the counts visible
-                        in this form when clicked.
-                      </div>
-                    ) : null}
-
-                    {!draftAbsenteeCountMatchesExpected ? (
-                      <div className="rounded-lg border border-border/80 bg-white px-4 py-3 text-sm leading-6 text-muted-foreground">
-                        The saved draft absent count does not match the current
-                        absentee records yet. Submission will validate the
-                        counts and records visible on this page when clicked.
-                      </div>
-                    ) : null}
 
                     <div className="flex flex-col gap-3 border-t border-border/80 pt-1 sm:flex-row">
                       <Button

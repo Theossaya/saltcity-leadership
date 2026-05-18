@@ -41,6 +41,9 @@ export type WeeklyReportSummary = {
   generalNotes: string | null;
   supportNeeded: string | null;
   testimonies: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  reviewerNotes: string | null;
 };
 
 export type CompanyMemberOption = {
@@ -70,11 +73,23 @@ export type CompanyReportWorkspace = {
 
 export type AdminReportCompanyRow = {
   company: ReportCompany;
+  reportId: string | null;
   leaderName: string | null;
   reportStatus: ReportStatus;
   submittedAt: string | null;
   submittedByName: string | null;
+  reviewedAt: string | null;
+  reviewedByName: string | null;
+  reviewerNotes: string | null;
+  totalMembers: number | null;
+  presentCount: number | null;
+  absentCount: number | null;
+  newVisitorsCount: number | null;
+  generalNotes: string | null;
+  supportNeeded: string | null;
+  testimonies: string | null;
   absenteeCount: number;
+  canReview: boolean;
 };
 
 export type AdminReportsOverview = {
@@ -117,6 +132,9 @@ type WeeklyReportRow = {
   general_notes: string | null;
   support_needed: string | null;
   testimonies: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  reviewer_notes: string | null;
 };
 
 type CompanyMemberRow = {
@@ -134,7 +152,7 @@ type AbsenteeRecordRow = {
 };
 
 const WEEKLY_REPORT_SUMMARY_SELECT =
-  "id, company_id, report_week_start, report_week_end, status, submitted_at, submitted_by, total_members, present_count, absent_count, new_visitors_count, general_notes, support_needed, testimonies";
+  "id, company_id, report_week_start, report_week_end, status, submitted_at, submitted_by, total_members, present_count, absent_count, new_visitors_count, general_notes, support_needed, testimonies, reviewed_by, reviewed_at, reviewer_notes";
 
 function toDateInput(value: Date) {
   return value.toISOString().slice(0, 10);
@@ -185,6 +203,11 @@ function mapReport(
     generalNotes: report.general_notes,
     supportNeeded: report.support_needed,
     testimonies: report.testimonies,
+    reviewedBy: report.reviewed_by
+      ? profileNames.get(report.reviewed_by) || null
+      : null,
+    reviewedAt: report.reviewed_at,
+    reviewerNotes: report.reviewer_notes,
   };
 }
 
@@ -491,6 +514,7 @@ export async function getAdminReportsOverview(
     collectProfileIds([
       ...companies.map((company) => company.leader_id),
       ...reports.map((report) => report.submitted_by),
+      ...reports.map((report) => report.reviewed_by),
     ]),
   );
   const reportsByCompany = new Map(
@@ -502,6 +526,7 @@ export async function getAdminReportsOverview(
 
     return {
       company: mapCompany(company),
+      reportId: report?.id ?? null,
       leaderName: company.leader_id
         ? profileResult.names.get(company.leader_id) || null
         : null,
@@ -510,7 +535,20 @@ export async function getAdminReportsOverview(
       submittedByName: report?.submitted_by
         ? profileResult.names.get(report.submitted_by) || null
         : null,
+      reviewedAt: report?.reviewed_at ?? null,
+      reviewedByName: report?.reviewed_by
+        ? profileResult.names.get(report.reviewed_by) || null
+        : null,
+      reviewerNotes: report?.reviewer_notes ?? null,
+      totalMembers: report?.total_members ?? null,
+      presentCount: report?.present_count ?? null,
+      absentCount: report?.absent_count ?? null,
+      newVisitorsCount: report?.new_visitors_count ?? null,
+      generalNotes: report?.general_notes ?? null,
+      supportNeeded: report?.support_needed ?? null,
+      testimonies: report?.testimonies ?? null,
       absenteeCount: report ? absenteeCounts.get(report.id) ?? 0 : 0,
+      canReview: report?.status === "submitted",
     };
   });
 
