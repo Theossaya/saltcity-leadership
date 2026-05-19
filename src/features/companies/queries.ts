@@ -15,6 +15,11 @@ export type AdminCompanyOverview = CompanyLeadership & {
   memberCount: number;
 };
 
+export type ActiveCompanyOption = {
+  id: string;
+  name: string;
+};
+
 export type CompanyMember = {
   id: string;
   fullName: string;
@@ -152,6 +157,7 @@ export async function getAdminCompaniesOverview(
         .from("company_members")
         .select("company_id")
         .eq("church_id", churchId)
+        .eq("status", "active")
         .returns<MemberCountRow[]>(),
       getProfileNames(collectProfileIds(companies)),
     ]);
@@ -183,6 +189,35 @@ export async function getAdminCompaniesOverview(
       memberCount: countByCompany.get(company.id) ?? 0,
     })),
     error,
+  };
+}
+
+export async function getActiveCompaniesForMemberCreate(
+  churchId: string,
+): Promise<CompanyQueryResult<ActiveCompanyOption[]>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("companies")
+    .select("id, name")
+    .eq("church_id", churchId)
+    .eq("status", "active")
+    .order("name", { ascending: true })
+    .returns<ActiveCompanyOption[]>();
+
+  if (error) {
+    return {
+      data: [],
+      error: toErrorMessage(
+        "Unable to load active companies for member creation",
+        error.message,
+      ),
+    };
+  }
+
+  return {
+    data: data ?? [],
+    error: null,
   };
 }
 

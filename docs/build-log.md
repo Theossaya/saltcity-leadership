@@ -336,3 +336,13 @@ The absentee insert runtime failure was fixed without weakening write protection
 - Preserved the strict `008_absentee_record_grants.sql` insert/delete policies for current-week draft reports.
 - Kept assigned leader follow-up context available through follow-up cases, companies, company members, and absentee records, with report week context falling back in the app when `weekly_reports` is not visible.
 - Removed the temporary absentee insert console logging after identifying the RLS recursion root cause.
+
+## Day 12 Afternoon — Company member creation foundation
+
+Admin-only company member creation was added without changing the core schema:
+
+- Added a compact `/companies` form for `church_admin` and `super_admin` users to add active members to active companies.
+- Created `supabase/sql/018_company_member_create_grants.sql` with the authenticated insert grant, removal of the old broad member manage policy, and a strict same-church active-admin insert policy.
+- Added validation and a Server Action that inserts through the authenticated Supabase server client, revalidates `/companies` and `/reports`, and returns success/error notices.
+- Updated admin company member counts to count active members, supporting guided weekly reporting with accurate active member lists.
+- Kept editing, deletion, deactivation/reactivation, status changes, company leader assignment changes, bulk import, Supabase Auth user creation, service role usage, and RLS bypassing out of scope.
