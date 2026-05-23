@@ -1,0 +1,271 @@
+/* SaltCity v2 — Pastoral · less boxy · warmer typography */
+
+/* ---------- Palette tokens ---------- */
+.pal-a {
+  /* Warm Berry Pastoral — soft cream/blush, rich berry/plum, peach surfaces, warm charcoal, muted gold */
+  --bg: #F3EADC;
+  --bg-tint: #ECDFCB;
+  --bg-deep: #E0CFB4;
+  --surface: #FBF3E6;       /* warm peach-cream surface */
+  --surface-2: #F6E6D9;     /* blush surface for accent cards */
+  --ink: #2C1E26;
+  --ink-2: #5A4A54;
+  --ink-3: #897C84;
+  --ink-4: #B5ACA9;
+  --rule: rgba(44,30,38,0.09);
+  --rule-strong: rgba(44,30,38,0.20);
+  --primary: #6E2A40;       /* berry */
+  --primary-ink: #FCF1E3;
+  --primary-soft: #E9C9C1;
+  --warm: #B5703F;          /* clay accent */
+  --warm-soft: #F2D9C0;     /* peach */
+  --calm: #6D7A4A;          /* olive */
+  --calm-soft: #DDE0BC;
+  --gold: #B58A3C;
+  --status-urgent: #8C2A29;
+  --status-urgent-bg: #ECD0CC;
+  --status-care: #9B5E22;
+  --status-care-bg: #F3E0C2;
+  --status-ok: #4D6B43;
+  --status-ok-bg: #D9E3CC;
+  --quiet: #756370;
+  --quiet-bg: #E5DBDC;
+  /* radii — unified across palettes */
+  --r-input: 12px;
+  --r-card: 16px;
+  --r-pill: 999px;
+  /* type */
+  --serif: 'Newsreader', Georgia, serif;
+  --sans: 'Public Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* one elevation token */
+  --shadow-lift: 0 1px 0 rgba(44,30,38,0.04), 0 12px 30px -22px rgba(44,30,38,0.28);
+}
+
+.pal-b {
+  /* Calm Teal — warm off-white, deep teal/blue-green, coral/blush, sand/stone, calm green */
+  --bg: #F6F1E7;
+  --bg-tint: #EEE7D8;
+  --bg-deep: #E1D7C2;
+  --surface: #FCF8EE;
+  --surface-2: #F1E2D6;     /* sand/blush surface */
+  --ink: #14323C;
+  --ink-2: #3F535E;
+  --ink-3: #7A8590;
+  --ink-4: #B5BCC3;
+  --rule: rgba(20,50,60,0.08);
+  --rule-strong: rgba(20,50,60,0.18);
+  --primary: #18525E;       /* deep teal */
+  --primary-ink: #F4FBFB;
+  --primary-soft: #C8DBDB;
+  --warm: #C97560;          /* coral */
+  --warm-soft: #F1D6C8;
+  --calm: #587B68;          /* gentle green */
+  --calm-soft: #D5E0D2;
+  --gold: #B58A3C;
+  --status-urgent: #A53F2F;
+  --status-urgent-bg: #F2D2C7;
+  --status-care: #B36F37;
+  --status-care-bg: #F1DCC2;
+  --status-ok: #4F7560;
+  --status-ok-bg: #D2E0D2;
+  --quiet: #76828D;
+  --quiet-bg: #DFE3E7;
+  /* radii — unified across palettes */
+  --r-input: 12px;
+  --r-card: 16px;
+  --r-pill: 999px;
+  /* type */
+  --serif: 'Newsreader', Georgia, serif;
+  --sans: 'Public Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* one elevation token */
+  --shadow-lift: 0 1px 0 rgba(20,50,60,0.04), 0 12px 30px -22px rgba(20,50,60,0.26);
+}
+
+/* pal-c removed from production — kept only for v2 staging file. */
+
+/* ---------- Base frame ---------- */
+.v2 *{box-sizing:border-box;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.v2{font-family:var(--sans);color:var(--ink);background:var(--bg);width:390px;height:844px;overflow:hidden;position:relative;display:flex;flex-direction:column;letter-spacing:-0.003em}
+.v2-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:96px}
+.v2-scroll::-webkit-scrollbar{display:none}
+
+/* ---------- Header (institutional but warm) ---------- */
+.v2-head{display:flex;align-items:center;gap:12px;padding:14px 20px 12px;position:relative;z-index:5;background:var(--bg)}
+.v2-head__mark{width:30px;height:30px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;flex:0 0 30px}
+.v2-head__mark img{width:20px;height:auto;display:block}
+.v2-head__id{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.v2-head__title{font-family:var(--sans);font-size:14px;font-weight:600;line-height:1.1;color:var(--ink);letter-spacing:-0.005em}
+.v2-head__role{font-family:var(--mono);font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.v2-head__role b{color:var(--ink-2);font-weight:600}
+.v2-head__actions{display:flex;gap:2px;align-items:center}
+.v2-iconbtn{width:32px;height:32px;border-radius:10px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-2)}
+.v2-iconbtn:hover{background:var(--bg-tint)}
+.v2-iconbtn svg{width:16px;height:16px;display:block}
+
+/* ---------- Greeting hero ---------- */
+.v2-greet{padding:16px 20px 4px}
+.v2-greet__eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.v2-greet__title{font-family:var(--serif);font-size:32px;line-height:1.05;font-weight:500;letter-spacing:-0.02em;color:var(--ink);margin:10px 0 8px;text-wrap:pretty}
+.v2-greet__title em{font-style:italic;color:var(--ink-2);font-weight:400}
+.v2-greet__sub{font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.5;color:var(--ink-2);text-wrap:pretty;max-width:34ch}
+
+/* ---------- Scripture / leadership word ---------- */
+.v2-word{margin:14px 20px 0;padding:20px 20px;border-radius:var(--r-card);background:var(--primary);color:var(--primary-ink);position:relative;overflow:hidden;box-shadow:var(--shadow-lift)}
+.v2-word__eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--primary-soft);margin-bottom:10px;font-weight:600;display:flex;align-items:center;gap:8px}
+.v2-word__eyebrow svg{width:12px;height:12px;opacity:0.85}
+.v2-word__body{font-family:var(--serif);font-style:italic;font-size:18px;line-height:1.4;font-weight:400;color:var(--primary-ink);text-wrap:pretty;letter-spacing:-0.005em}
+.v2-word__cite{font-family:var(--mono);font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--primary-soft);margin-top:14px;opacity:0.85}
+.v2-word__glyph{position:absolute;right:-6px;top:-18px;font-family:var(--serif);font-style:italic;font-size:120px;line-height:1;color:rgba(255,255,255,0.07);font-weight:500;pointer-events:none}
+
+/* ---------- Section title (no box) ---------- */
+.v2-sect{padding:22px 20px 10px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.v2-sect__t{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--ink-3);margin:0}
+.v2-sect__a{font-family:var(--sans);font-size:11.5px;color:var(--ink-2);font-weight:500;letter-spacing:0;text-decoration:none;background:transparent;border:0;cursor:pointer;padding:0}
+
+/* ---------- Floating soft card — single canonical surface ---------- */
+.v2-card{margin:0 20px;background:var(--surface);border-radius:var(--r-card);padding:18px 18px;box-shadow:var(--shadow-lift)}
+.v2-card + .v2-card{margin-top:10px}
+.v2-card--tinted{background:var(--surface-2);box-shadow:var(--shadow-lift)}
+.v2-card--flat{background:transparent;box-shadow:none;padding:0 20px;margin:0}
+
+/* ---------- Report reminder (warm operational hero) ---------- */
+.v2-remind{margin:14px 20px 0;border-radius:var(--r-card);padding:18px 18px;background:var(--warm-soft);color:var(--ink);position:relative;overflow:hidden}
+.v2-remind__row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.v2-remind__eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--warm);font-weight:700}
+.v2-remind__deadline{font-family:var(--mono);font-size:10px;letter-spacing:0.14em;color:var(--warm);text-transform:uppercase;font-weight:600;white-space:nowrap}
+.v2-remind__title{font-family:var(--serif);font-size:21px;line-height:1.2;font-weight:500;color:var(--ink);letter-spacing:-0.012em;margin:4px 0 8px;text-wrap:pretty}
+.v2-remind__body{font-size:13px;color:var(--ink-2);line-height:1.55;margin-bottom:14px}
+.v2-progress{height:6px;background:rgba(0,0,0,0.07);border-radius:999px;overflow:hidden;margin-bottom:10px}
+.v2-progress > i{display:block;height:100%;background:var(--warm);border-radius:999px}
+.v2-progress--primary > i{background:var(--primary)}
+.v2-progress--calm > i{background:var(--calm)}
+.v2-progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;color:var(--ink-2);text-transform:uppercase;margin-bottom:14px;font-weight:600;flex-wrap:wrap;gap:6px 14px}
+
+/* ---------- Buttons ---------- */
+.v2-btn{font-family:var(--sans);font-size:13.5px;font-weight:600;padding:12px 18px;border-radius:var(--r-pill);border:0;cursor:pointer;letter-spacing:0.005em;display:inline-flex;align-items:center;justify-content:center;gap:8px;line-height:1}
+.v2-btn--ink{background:var(--ink);color:var(--bg)}
+.v2-btn--primary{background:var(--primary);color:var(--primary-ink)}
+.v2-btn--warm{background:var(--warm);color:#fff}
+.v2-btn--soft{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule-strong)}
+.v2-btn--full{width:100%}
+.v2-btn--lg{padding:14px 20px;font-size:14px}
+
+/* ---------- Pills (smaller, calmer) ---------- */
+.v2-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;letter-spacing:0.12em;text-transform:uppercase;padding:4px 9px;border-radius:999px;font-weight:600;line-height:1}
+.v2-pill .pd{width:5px;height:5px;border-radius:50%}
+.v2-pill--urgent{background:var(--status-urgent-bg);color:var(--status-urgent)}
+.v2-pill--urgent .pd{background:var(--status-urgent)}
+.v2-pill--care{background:var(--status-care-bg);color:var(--status-care)}
+.v2-pill--care .pd{background:var(--status-care)}
+.v2-pill--ok{background:var(--status-ok-bg);color:var(--status-ok)}
+.v2-pill--ok .pd{background:var(--status-ok)}
+.v2-pill--quiet{background:var(--quiet-bg);color:var(--quiet)}
+.v2-pill--quiet .pd{background:var(--quiet)}
+
+/* ---------- People row (no border, soft separator) ---------- */
+.v2-prow{display:flex;gap:14px;align-items:flex-start;padding:14px 0;position:relative}
+.v2-prow:first-child{padding-top:0}
+.v2-prow:last-child{padding-bottom:0}
+.v2-prow + .v2-prow{box-shadow:inset 0 1px 0 var(--rule)}
+.v2-prow__avatar{width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:var(--bg-tint);display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink-2);letter-spacing:0.01em;position:relative}
+.v2-prow__avatar--ring-urgent{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--status-urgent)}
+.v2-prow__avatar--ring-care{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--status-care)}
+.v2-prow__avatar--ring-ok{box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--status-ok)}
+.v2-prow__body{flex:1;min-width:0}
+.v2-prow__head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:2px;min-width:0}
+.v2-prow__name{font-family:var(--sans);font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:-0.005em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.v2-prow__head .v2-pill{flex:0 0 auto}
+.v2-prow__sub{font-family:var(--sans);font-size:12px;color:var(--ink-3);letter-spacing:0;line-height:1.4}
+.v2-prow__note{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--ink-2);margin-top:6px;line-height:1.45;text-wrap:pretty}
+
+/* ---------- Task row ---------- */
+.v2-trow{display:flex;gap:14px;align-items:flex-start;padding:13px 0}
+.v2-trow:first-child{padding-top:0}
+.v2-trow:last-child{padding-bottom:0}
+.v2-trow + .v2-trow{box-shadow:inset 0 1px 0 var(--rule)}
+.v2-check{width:20px;height:20px;flex:0 0 20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:transparent;box-shadow:inset 0 0 0 1.5px var(--rule-strong);margin-top:1px;transition:all 0.15s ease}
+.v2-check.is-done{background:var(--calm);box-shadow:inset 0 0 0 0 var(--calm);color:#fff}
+.v2-check.is-done::after{content:'';width:9px;height:5px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translate(0,-1px)}
+.v2-trow__body{flex:1;min-width:0}
+.v2-trow__t{font-family:var(--sans);font-size:14px;color:var(--ink);font-weight:500;line-height:1.35;letter-spacing:-0.005em}
+.v2-trow__t.is-done{color:var(--ink-3);text-decoration:line-through}
+.v2-trow__meta{display:flex;gap:8px;align-items:center;margin-top:4px;font-family:var(--sans);font-size:11.5px;color:var(--ink-3)}
+.v2-trow__meta .sep{opacity:0.5}
+.v2-trow__prio{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;font-weight:700}
+
+/* ---------- Sunday event ---------- */
+.v2-sun{margin:0 20px;background:var(--surface);border-radius:var(--r-card);padding:18px 18px;display:flex;gap:16px;align-items:center;box-shadow:var(--shadow-lift)}
+.v2-sun__date{width:54px;flex:0 0 54px;text-align:center;border-radius:var(--r-input);background:var(--bg-deep);padding:8px 0 10px;color:var(--ink)}
+.v2-sun__date.dark{background:var(--primary);color:var(--primary-ink)}
+.v2-sun__date .m{font-family:var(--mono);font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;font-weight:700;opacity:0.7}
+.v2-sun__date .d{font-family:var(--serif);font-size:28px;font-weight:500;line-height:1;letter-spacing:-0.01em;margin-top:2px}
+.v2-sun__date .y{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;margin-top:3px;opacity:0.6;text-transform:uppercase}
+.v2-sun__title{font-family:var(--serif);font-size:17px;font-weight:500;color:var(--ink);letter-spacing:-0.005em;line-height:1.2;margin-bottom:4px}
+.v2-sun__eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:0.14em;color:var(--ink-3);text-transform:uppercase;margin-bottom:4px;font-weight:600}
+.v2-sun__meta{font-size:12.5px;color:var(--ink-3);line-height:1.45}
+
+/* ---------- Form fields ---------- */
+.v2-field{display:flex;flex-direction:column;gap:6px}
+.v2-field__label{font-family:var(--mono);font-size:9.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.v2-input,.v2-ta,.v2-sel{font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--bg);border:0;box-shadow:inset 0 0 0 1px var(--rule-strong);border-radius:var(--r-input);padding:12px 14px;width:100%;line-height:1.4;outline:none;font-weight:500}
+.v2-ta{resize:none;min-height:80px;line-height:1.5}
+.v2-input:focus,.v2-ta:focus,.v2-sel:focus{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.v2-input::placeholder,.v2-ta::placeholder{color:var(--ink-4);font-style:italic;font-family:var(--serif)}
+
+/* ---------- Member chip (attendance) ---------- */
+.v2-mchip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px 8px 8px;background:var(--surface);border-radius:999px;font-family:var(--sans);font-size:13px;color:var(--ink);font-weight:500;cursor:pointer;box-shadow:inset 0 0 0 1px var(--rule)}
+.v2-mchip .mi{width:24px;height:24px;border-radius:50%;background:var(--bg-deep);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--ink-2)}
+.v2-mchip.is-absent{background:var(--status-urgent-bg);color:var(--status-urgent);box-shadow:inset 0 0 0 1px var(--status-urgent-bg)}
+.v2-mchip.is-absent .mi{background:var(--status-urgent);color:#fff}
+.v2-mchip.is-absent .label{text-decoration:line-through}
+
+/* ---------- Soft divider ---------- */
+.v2-soft-div{height:1px;background:var(--rule);margin:14px 0}
+
+/* ---------- Bottom nav (typographic, less iconic) ---------- */
+.v2-nav{position:absolute;left:0;right:0;bottom:0;padding:10px 14px 18px;display:flex;gap:6px;z-index:8;background:linear-gradient(180deg, rgba(0,0,0,0) 0%, var(--bg) 35%);pointer-events:none}
+.v2-nav__rail{flex:1;background:var(--surface);border-radius:999px;display:flex;padding:6px;box-shadow:var(--shadow-lift);pointer-events:auto}
+.v2-nav__item{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;font-family:var(--sans);font-size:11.5px;font-weight:600;color:var(--ink-3);background:transparent;border:0;cursor:pointer;border-radius:999px;letter-spacing:-0.005em;min-width:0}
+.v2-nav__item svg{width:14px;height:14px;flex:0 0 14px}
+.v2-nav__item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v2-nav__item.is-active{background:var(--ink);color:var(--bg)}
+
+/* ---------- Stat / counter ---------- */
+.v2-counter{display:flex;flex-direction:column;gap:4px;min-width:0}
+.v2-counter .v{font-family:var(--serif);font-size:28px;font-weight:500;color:var(--ink);letter-spacing:-0.015em;line-height:1}
+.v2-counter .v small{font-family:var(--sans);font-size:13px;color:var(--ink-3);font-weight:500}
+.v2-counter .l{font-family:var(--sans);font-size:11.5px;color:var(--ink-3);letter-spacing:0;line-height:1.3}
+
+/* ---------- Notice ---------- */
+.v2-notice{padding:18px 18px;border-radius:var(--r-card);background:var(--surface);color:var(--ink);margin:0 20px;box-shadow:var(--shadow-lift);position:relative}
+.v2-notice--accent{background:var(--calm-soft);box-shadow:none}
+.v2-notice__head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.v2-notice__tag{font-family:var(--mono);font-size:9.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--calm);font-weight:700}
+.v2-notice__date{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.v2-notice__t{font-family:var(--serif);font-size:17px;font-weight:500;letter-spacing:-0.008em;line-height:1.22;color:var(--ink);margin-bottom:6px;text-wrap:pretty}
+.v2-notice__b{font-size:13px;color:var(--ink-2);line-height:1.5}
+
+/* ---------- Header brand variation labels ---------- */
+.pal-label{position:absolute;top:-44px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#5b5448;font-weight:600;display:flex;justify-content:center;align-items:center;gap:8px}
+.pal-label .swatch{display:inline-flex;gap:3px;margin-left:4px}
+.pal-label .swatch i{width:12px;height:12px;border-radius:50%}
+
+/* ---------- Spacing tokens (informational) ----------
+   --space-after-greet: 4px below greet inside .v2-greet padding
+   --space-after-section: 10px below section label inside .v2-sect padding
+   --space-between-sections: 22px top of .v2-sect
+   --space-card-padding: 18px standard, 14px for index lists
+*/
+
+/* ---------- Adjacent-sibling spacing rules ---------- */
+/* When word/remind/sun follow a section label, kill their default top margin
+   so the eyebrow visually attaches to the module below. */
+.v2-sect + .v2-word,
+.v2-sect + .v2-remind,
+.v2-sect + .v2-sun{margin-top:0}
+
+/* ---------- Bottom-of-scroll spacer above nav ---------- */
+.v2-tail{height:24px}
+.v2-scroll > *:last-child{margin-bottom:0}
