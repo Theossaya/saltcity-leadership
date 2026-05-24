@@ -346,3 +346,21 @@ Admin-only company member creation was added without changing the core schema:
 - Added validation and a Server Action that inserts through the authenticated Supabase server client, revalidates `/companies` and `/reports`, and returns success/error notices.
 - Updated admin company member counts to count active members, supporting guided weekly reporting with accurate active member lists.
 - Kept editing, deletion, deactivation/reactivation, status changes, company leader assignment changes, bulk import, Supabase Auth user creation, service role usage, and RLS bypassing out of scope.
+
+## Day 13 V2 Design Foundation — Theme tokens, brand assets, V2 chrome, and dashboard
+
+The approved SaltCity Leadership Briefing System visual foundation was started as a visual-only pass:
+
+- Added Warm Berry as the default `html.theme-warm-berry` token foundation and Calm Teal as the alternate `html.theme-calm-teal` token set.
+- Mapped V2 CSS variables into Tailwind v4 theme tokens for surfaces, ink, role colours, status colours, radii, and V2 font families.
+- Connected the production brand assets from `public/brand/logo.svg` and `public/brand/logo-white.svg`, with the header mark using the white logo inside the primary-coloured mark.
+- Added Newsreader, Public Sans, and JetBrains Mono through the existing Next.js font approach.
+- Added the V2 chrome/component foundation needed for dashboard migration, including `V2Head`, `V2Nav`, `V2Greeting`, `V2Sect`, `Pill`, `Avatar`, `Button`, `Counter`, `Progress`, `TaskRow`, `PersonRow`, `Word`, `ReminderCard`, `Notice`, `EventCard`, and `DateTile`.
+- Migrated `/dashboard` from a generic navigation-card grid to the V2 leadership briefing structure, using existing dashboard user/company data only and calm placeholders where report, care, task, event, or announcement preview data is not yet loaded.
+- Updated shell/header/nav spacing for the V2 mobile-first chrome, bottom-nav safe-area padding, and scroll clearance.
+- Made no database schema, SQL migration, RLS policy, Supabase query, Server Action, permission, validation, route, mutation, or business-logic changes.
+
+### Day 13 V2 font build-safety fix
+
+- Removed the external `next/font/google` dependency from the V2 design foundation so production builds do not fetch Google Fonts.
+- Kept build-safe local/fallback font variables for `--font-serif`, `--font-sans`, and `--font-mono`, preferring Newsreader, Public Sans, and JetBrains Mono by family name only when already available locally.

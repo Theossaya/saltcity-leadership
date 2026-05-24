@@ -5,12 +5,39 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-bg: var(--bg);
+  --color-bg-tint: var(--bg-tint);
+  --color-bg-deep: var(--bg-deep);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-warm: var(--warm);
+  --color-warm-soft: var(--warm-soft);
+  --color-calm: var(--calm);
+  --color-calm-soft: var(--calm-soft);
+  --color-gold: var(--gold);
+  --color-urgent: var(--status-urgent);
+  --color-urgent-bg: var(--status-urgent-bg);
+  --color-care: var(--status-care);
+  --color-care-bg: var(--status-care-bg);
+  --color-ok: var(--status-ok);
+  --color-ok-bg: var(--status-ok-bg);
+  --color-quiet: var(--quiet);
+  --color-quiet-bg: var(--quiet-bg);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-galano), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
-  --font-heading: var(--font-sans);
+  --font-serif: var(--v2-font-serif);
+  --font-sans: var(--v2-font-sans);
+  --font-mono: var(--v2-font-mono);
+  --font-heading: var(--font-serif);
+  --radius-input: var(--r-input);
+  --radius-card: var(--r-card);
+  --radius-pill: var(--r-pill);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,6 +77,52 @@
 }
 
 :root {
+  --v2-font-serif: "Newsreader", Georgia, "Times New Roman", Times, serif;
+  --v2-font-sans: "Public Sans", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --v2-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-serif: var(--v2-font-serif);
+  --font-sans: var(--v2-font-sans);
+  --font-mono: var(--v2-font-mono);
+  --serif: var(--v2-font-serif);
+  --sans: var(--v2-font-sans);
+  --mono: var(--v2-font-mono);
+  --r-input: 12px;
+  --r-card: 16px;
+  --r-pill: 999px;
+
+  /* Warm Berry is the default V2 theme. */
+  --bg: #f3eadc;
+  --bg-tint: #ecdfcb;
+  --bg-deep: #e0cfb4;
+  --surface: #fbf3e6;
+  --surface-2: #f6e6d9;
+  --ink: #2c1e26;
+  --ink-2: #5a4a54;
+  --ink-3: #897c84;
+  --ink-4: #b5aca9;
+  --rule: rgba(44, 30, 38, 0.09);
+  --rule-strong: rgba(44, 30, 38, 0.2);
+  --primary: #6e2a40;
+  --primary-ink: #fcf1e3;
+  --primary-soft: #e9c9c1;
+  --warm: #b5703f;
+  --warm-soft: #f2d9c0;
+  --calm: #6d7a4a;
+  --calm-soft: #dde0bc;
+  --gold: #b58a3c;
+  --status-urgent: #8c2a29;
+  --status-urgent-bg: #ecd0cc;
+  --status-care: #9b5e22;
+  --status-care-bg: #f3e0c2;
+  --status-ok: #4d6b43;
+  --status-ok-bg: #d9e3cc;
+  --quiet: #756370;
+  --quiet-bg: #e5dbdc;
+  --shadow-lift: 0 1px 0 rgba(44, 30, 38, 0.04),
+    0 12px 30px -22px rgba(44, 30, 38, 0.28);
+
   --background: #f6f1eb;
   --foreground: #151217;
   --card: #fbfaf8;
@@ -82,6 +155,99 @@
   --sidebar-accent-foreground: #151217;
   --sidebar-border: #e4ddd5;
   --sidebar-ring: #2a1630;
+}
+
+html.theme-warm-berry {
+  --bg: #f3eadc;
+  --bg-tint: #ecdfcb;
+  --bg-deep: #e0cfb4;
+  --surface: #fbf3e6;
+  --surface-2: #f6e6d9;
+  --ink: #2c1e26;
+  --ink-2: #5a4a54;
+  --ink-3: #897c84;
+  --ink-4: #b5aca9;
+  --rule: rgba(44, 30, 38, 0.09);
+  --rule-strong: rgba(44, 30, 38, 0.2);
+  --primary: #6e2a40;
+  --primary-ink: #fcf1e3;
+  --primary-soft: #e9c9c1;
+  --warm: #b5703f;
+  --warm-soft: #f2d9c0;
+  --calm: #6d7a4a;
+  --calm-soft: #dde0bc;
+  --gold: #b58a3c;
+  --status-urgent: #8c2a29;
+  --status-urgent-bg: #ecd0cc;
+  --status-care: #9b5e22;
+  --status-care-bg: #f3e0c2;
+  --status-ok: #4d6b43;
+  --status-ok-bg: #d9e3cc;
+  --quiet: #756370;
+  --quiet-bg: #e5dbdc;
+  --shadow-lift: 0 1px 0 rgba(44, 30, 38, 0.04),
+    0 12px 30px -22px rgba(44, 30, 38, 0.28);
+}
+
+html.theme-calm-teal {
+  --bg: #f6f1e7;
+  --bg-tint: #eee7d8;
+  --bg-deep: #e1d7c2;
+  --surface: #fcf8ee;
+  --surface-2: #f1e2d6;
+  --ink: #14323c;
+  --ink-2: #3f535e;
+  --ink-3: #7a8590;
+  --ink-4: #b5bcc3;
+  --rule: rgba(20, 50, 60, 0.08);
+  --rule-strong: rgba(20, 50, 60, 0.18);
+  --primary: #18525e;
+  --primary-ink: #f4fbfb;
+  --primary-soft: #c8dbdb;
+  --warm: #c97560;
+  --warm-soft: #f1d6c8;
+  --calm: #587b68;
+  --calm-soft: #d5e0d2;
+  --gold: #b58a3c;
+  --status-urgent: #a53f2f;
+  --status-urgent-bg: #f2d2c7;
+  --status-care: #b36f37;
+  --status-care-bg: #f1dcc2;
+  --status-ok: #4f7560;
+  --status-ok-bg: #d2e0d2;
+  --quiet: #76828d;
+  --quiet-bg: #dfe3e7;
+  --shadow-lift: 0 1px 0 rgba(20, 50, 60, 0.04),
+    0 12px 30px -22px rgba(20, 50, 60, 0.26);
+}
+
+html.theme-warm-berry,
+html.theme-calm-teal {
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary-foreground: var(--primary-ink);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--bg-tint);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--calm-soft);
+  --accent-foreground: var(--ink);
+  --destructive: var(--status-urgent);
+  --border: var(--rule);
+  --input: var(--rule-strong);
+  --ring: var(--ink);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-ink);
+  --sidebar-accent: var(--bg-tint);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--ink);
 }
 
 .dark {
@@ -127,5 +293,13 @@
   }
   html {
     @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+}
+
+@layer utilities {
+  .shadow-lift {
+    box-shadow: var(--shadow-lift);
   }
 }
