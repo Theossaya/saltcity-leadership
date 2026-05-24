@@ -364,3 +364,18 @@ The approved SaltCity Leadership Briefing System visual foundation was started a
 
 - Removed the external `next/font/google` dependency from the V2 design foundation so production builds do not fetch Google Fonts.
 - Kept build-safe local/fallback font variables for `--font-serif`, `--font-sans`, and `--font-mono`, preferring Newsreader, Public Sans, and JetBrains Mono by family name only when already available locally.
+
+## Phase 13B — V2 Reports migration
+
+The reports experience was migrated to the approved SaltCity Leadership Briefing System as a visual and usability pass:
+
+- Migrated the company leader draft report screen to a guided weekly flow with V2 greeting, report week context, Attendance → Notes → Submit step rail, attendance counters, present-by-default member chips, marked absent members, and clearer save/submit actions.
+- Migrated submitted, reviewed, and flagged company reports to a calm read-only V2 layout with status, submission/review metadata, attendance summary, absentee records, and notes from the week.
+- Migrated the admin reports overview to V2 submission progress, reviewed/submitted/flagged/missing counters, needs-attention, missing submissions, awaiting-review, and reviewed sections.
+- Restyled the existing admin report review controls while preserving the reviewed/flagged outcomes, reviewer notes field, flagged-note requirement, and existing Server Action.
+- Kept the pass visual only: no schema, SQL migration, RLS policy, Supabase query behavior, Server Action behavior, validation, permission, route, form field name, mutation, report submission logic, absentee insert/delete logic, or review logic changes.
+
+### Phase 13B Reports V2 review fixes
+
+- Restored draft reports to visible admin overview coverage with a distinct in-progress section and draft progress count.
+- Checked Reports V2 bottom-nav clearance; the existing AppShell bottom padding keeps report content and actions above the floating nav.

@@ -20,6 +20,10 @@ export function V2Sect({ children, action, href }: V2SectProps) {
         >
           {action}
         </Link>
+      ) : action ? (
+        <span className="shrink-0 font-sans text-[11.5px] font-medium text-ink-3">
+          {action}
+        </span>
       ) : null}
     </div>
   );

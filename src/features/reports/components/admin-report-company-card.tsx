@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/v2/primitives/button";
+import { Counter } from "@/components/v2/primitives/counter";
+import { Field, Select, TextArea } from "@/components/v2/primitives/field";
+import { Pill } from "@/components/v2/primitives/pill";
 import { reviewWeeklyReport } from "@/features/reports/actions";
 import { ReportStatusBadge } from "@/features/reports/components/report-status-badge";
 import type { AdminReportCompanyRow } from "@/features/reports/queries";
@@ -16,6 +16,7 @@ function formatSubmittedAt(value: string) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "Africa/Lagos",
   }).format(new Date(value));
 }
 
@@ -25,155 +26,129 @@ function renderOptionalReportNote(label: string, value: string | null) {
   }
 
   return (
-    <div className="rounded-lg border border-border/80 bg-white px-3 py-2">
-      <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+    <div className="rounded-input bg-bg px-3 py-2 shadow-[inset_0_0_0_1px_var(--rule)]">
+      <p className="font-mono text-[9.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-3">
         {label}
       </p>
-      <p className="mt-1 text-sm leading-6 text-foreground">{value}</p>
+      <p className="mt-1.5 whitespace-pre-wrap break-words font-sans text-[13px] leading-[1.55] text-ink">
+        {value}
+      </p>
     </div>
   );
 }
 
 export function AdminReportCompanyCard({ row }: AdminReportCompanyCardProps) {
   const reviewedAt = row.reviewedAt ? formatSubmittedAt(row.reviewedAt) : null;
+  const submittedAt = row.submittedAt
+    ? formatSubmittedAt(row.submittedAt)
+    : "Not submitted";
 
   return (
-    <Card
-      className="rounded-lg border-border/80 bg-card shadow-[0_10px_28px_rgba(21,18,23,0.045)]"
-      size="sm"
-    >
-      <CardHeader className="gap-3 pb-1">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <CardTitle className="truncate text-base font-semibold">
-              {row.company.name}
-            </CardTitle>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {row.leaderName || "No leader assigned"}
+    <section className="rounded-card bg-surface p-[18px] shadow-lift">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate font-serif text-[18px] font-medium leading-[1.22] tracking-[-0.008em] text-ink">
+            {row.company.name}
+          </h3>
+          <p className="mt-1 font-sans text-xs font-medium leading-snug text-ink-3">
+            {row.leaderName || "No leader assigned"}
+          </p>
+        </div>
+        <ReportStatusBadge status={row.reportStatus} />
+      </div>
+
+      <div className="mt-4 grid grid-cols-3 gap-3 rounded-input bg-bg p-3">
+        <Counter value={row.absenteeCount} label="Absentees" />
+        <Counter value={row.presentCount ?? "—"} label="Present" />
+        <Counter value={row.newVisitorsCount ?? "—"} label="Visitors" />
+      </div>
+
+      <div className="mt-3 grid gap-2 rounded-input bg-bg p-3 font-sans text-[12px] leading-[1.45] text-ink-3 shadow-[inset_0_0_0_1px_var(--rule)]">
+        <p>
+          Submitted{" "}
+          <span className="font-semibold text-ink">{submittedAt}</span>
+        </p>
+        <p>
+          Submitted by{" "}
+          <span className="font-semibold text-ink">
+            {row.submittedByName || "No submission"}
+          </span>
+        </p>
+      </div>
+
+      {row.reportId ? (
+        <div className="mt-3 grid gap-2">
+          {renderOptionalReportNote("General notes", row.generalNotes)}
+          {renderOptionalReportNote("Support needed", row.supportNeeded)}
+          {renderOptionalReportNote("Testimonies", row.testimonies)}
+        </div>
+      ) : null}
+
+      {row.canReview && row.reportId ? (
+        <form
+          action={reviewWeeklyReport}
+          className="mt-4 grid gap-3 rounded-card bg-warm-soft p-[18px]"
+        >
+          <input type="hidden" name="reportId" value={row.reportId} />
+          <div>
+            <p className="font-mono text-[9.5px] font-bold uppercase leading-none tracking-[0.18em] text-warm">
+              Review queue
             </p>
+            <h4 className="mt-2 font-serif text-[17px] font-medium leading-[1.22] tracking-[-0.008em] text-ink">
+              Mark this report reviewed or flagged.
+            </h4>
           </div>
-          <ReportStatusBadge status={row.reportStatus} />
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-3 rounded-lg text-sm text-muted-foreground">
-        <div className="grid gap-2 rounded-lg border border-border/80 bg-[#FBFAF8] p-3 sm:grid-cols-3">
-          <p>
-            Absentees{" "}
-            <span className="block font-medium text-foreground">
-              {row.absenteeCount}
-            </span>
-          </p>
-          <p>
-            Submitted{" "}
-            <span className="block font-medium text-foreground">
-              {row.submittedAt ? formatSubmittedAt(row.submittedAt) : "Not submitted"}
-            </span>
-          </p>
-          <p>
-            Submitted by{" "}
-            <span className="block font-medium text-foreground">
-              {row.submittedByName || "No submission"}
-            </span>
-          </p>
-        </div>
 
-        {row.reportId ? (
-          <div className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-3">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <p>
-                Total{" "}
-                <span className="block font-medium text-foreground">
-                  {row.totalMembers ?? 0}
-                </span>
-              </p>
-              <p>
-                Present{" "}
-                <span className="block font-medium text-foreground">
-                  {row.presentCount ?? 0}
-                </span>
-              </p>
-              <p>
-                Absent{" "}
-                <span className="block font-medium text-foreground">
-                  {row.absentCount ?? 0}
-                </span>
-              </p>
-              <p>
-                Visitors{" "}
-                <span className="block font-medium text-foreground">
-                  {row.newVisitorsCount ?? 0}
-                </span>
-              </p>
-            </div>
-
-            {renderOptionalReportNote("General notes", row.generalNotes)}
-            {renderOptionalReportNote("Support needed", row.supportNeeded)}
-            {renderOptionalReportNote("Testimonies", row.testimonies)}
-          </div>
-        ) : null}
-
-        {row.canReview && row.reportId ? (
-          <form
-            action={reviewWeeklyReport}
-            className="grid gap-3 rounded-lg border border-primary/15 bg-[#F1ECE6] p-3"
-          >
-            <input type="hidden" name="reportId" value={row.reportId} />
-
-            <div className="grid gap-2 sm:grid-cols-[minmax(0,12rem)_1fr]">
-              <div className="grid gap-2">
-                <Label htmlFor={`reviewStatus-${row.reportId}`}>Outcome</Label>
-                <select
-                  id={`reviewStatus-${row.reportId}`}
-                  name="reviewStatus"
-                  defaultValue="reviewed"
-                  className="h-12 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                >
-                  <option value="reviewed">Reviewed</option>
-                  <option value="flagged">Flagged</option>
-                </select>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor={`reviewerNotes-${row.reportId}`}>
-                  Reviewer notes
-                </Label>
-                <Textarea
-                  id={`reviewerNotes-${row.reportId}`}
-                  name="reviewerNotes"
-                  maxLength={1500}
-                  className="min-h-24 bg-background"
-                  placeholder="Optional unless flagged"
-                />
-              </div>
-            </div>
-
-            <div className="border-t border-border/80 pt-1">
-              <Button
-                type="submit"
-                className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,12rem)_1fr]">
+            <Field htmlFor={`reviewStatus-${row.reportId}`} label="Outcome">
+              <Select
+                id={`reviewStatus-${row.reportId}`}
+                name="reviewStatus"
+                defaultValue="reviewed"
               >
-                Submit review
-              </Button>
-            </div>
-          </form>
-        ) : reviewedAt || row.reviewerNotes ? (
-          <div className="grid gap-2 rounded-lg border border-primary/15 bg-[#F1ECE6] p-3">
-            <p className="font-medium text-foreground">
+                <option value="reviewed">Reviewed</option>
+                <option value="flagged">Flagged</option>
+              </Select>
+            </Field>
+
+            <Field
+              htmlFor={`reviewerNotes-${row.reportId}`}
+              label="Reviewer notes"
+              hint="Required when flagging a report."
+            >
+              <TextArea
+                id={`reviewerNotes-${row.reportId}`}
+                name="reviewerNotes"
+                maxLength={1500}
+                placeholder="Optional unless flagged"
+              />
+            </Field>
+          </div>
+
+          <Button type="submit" variant="ink" className="w-full sm:w-fit">
+            Submit review
+          </Button>
+        </form>
+      ) : reviewedAt || row.reviewerNotes ? (
+        <div className="mt-4 rounded-card bg-calm-soft p-[18px]">
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill tone={row.reportStatus === "flagged" ? "urgent" : "ok"}>
               {row.reportStatus === "flagged" ? "Flagged" : "Reviewed"}
-            </p>
+            </Pill>
             {reviewedAt ? (
-              <p>
-                {row.reportStatus === "flagged" ? "Flagged" : "Reviewed"}{" "}
+              <p className="font-sans text-xs font-medium text-ink-3">
                 {reviewedAt}
                 {row.reviewedByName ? ` by ${row.reviewedByName}` : ""}
               </p>
             ) : null}
-            {row.reviewerNotes ? (
-              <p className="leading-6 text-foreground">{row.reviewerNotes}</p>
-            ) : null}
           </div>
-        ) : null}
-      </CardContent>
-    </Card>
+          {row.reviewerNotes ? (
+            <p className="mt-2 whitespace-pre-wrap break-words font-sans text-[13px] leading-[1.55] text-ink-2">
+              {row.reviewerNotes}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   );
 }

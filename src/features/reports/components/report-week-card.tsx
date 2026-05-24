@@ -1,6 +1,5 @@
 import { CalendarDays } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import type { ReportWeekRange } from "@/features/reports/queries";
 
 type ReportWeekCardProps = {
@@ -24,23 +23,18 @@ export function formatReportWeek(week: ReportWeekRange) {
 
 export function ReportWeekCard({ week }: ReportWeekCardProps) {
   return (
-    <Card
-      className="rounded-lg border-primary/15 bg-[#FBFAF8] shadow-[0_8px_22px_rgba(21,18,23,0.045)]"
-      size="sm"
-    >
-      <CardContent className="flex items-center gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[#241126] text-white shadow-[0_8px_18px_rgba(36,17,38,0.12)]">
-          <CalendarDays className="size-4" aria-hidden="true" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-            Current report week
-          </p>
-          <p className="mt-1 text-sm font-semibold text-foreground">
-            {formatReportWeek(week)}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+    <section className="flex items-center gap-3 rounded-card bg-surface p-[18px] shadow-lift">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-input bg-primary text-primary-ink">
+        <CalendarDays className="size-4" strokeWidth={1.7} aria-hidden="true" />
+      </div>
+      <div className="min-w-0">
+        <p className="font-mono text-[9.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-3">
+          Current report week
+        </p>
+        <p className="mt-1.5 font-sans text-sm font-semibold leading-snug text-ink">
+          {formatReportWeek(week)}
+        </p>
+      </div>
+    </section>
   );
 }
