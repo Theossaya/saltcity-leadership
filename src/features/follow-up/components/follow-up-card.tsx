@@ -1,8 +1,6 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/v2/primitives/button";
+import { Field, Select, TextArea, TextInput } from "@/components/v2/primitives/field";
+import { Pill } from "@/components/v2/primitives/pill";
 import {
   createFollowUpCase,
   updateFollowUpCaseProgress,
@@ -26,15 +24,17 @@ type FollowUpCardProps = {
   item: FollowUpQueueItem;
   createOptions?: FollowUpCreateOptions;
   canCreateCase?: boolean;
+  featured?: boolean;
+  perspective?: "admin-new" | "admin-assigned" | "leader-assigned";
 };
 
-const followUpStatusClasses: Record<FollowUpStatus, string> = {
-  not_started: "border-border bg-white text-muted-foreground",
-  open: "border-[#CFC4D4] bg-[#F5F0F7] text-[#241126]",
-  assigned: "border-[#C5D1DE] bg-[#F0F4F8] text-[#102033]",
-  contacted: "border-[#C9D8CF] bg-[#F1F7F3] text-[#1D4B31]",
-  resolved: "border-[#C9D8CF] bg-[#F1F7F3] text-[#1D4B31]",
-  escalated: "border-[#E3C9CE] bg-[#FAF0F2] text-[#7B1E32]",
+const statusTone: Record<FollowUpStatus, "urgent" | "care" | "ok" | "quiet"> = {
+  not_started: "quiet",
+  open: "quiet",
+  assigned: "care",
+  contacted: "care",
+  resolved: "ok",
+  escalated: "urgent",
 };
 
 function formatDate(value: string) {
@@ -61,11 +61,17 @@ function getReportStatusLabel(status: string) {
 }
 
 function getFollowUpStatusLabel(status: FollowUpStatus) {
-  return status === "not_started"
-    ? "Not started"
-    : FOLLOW_UP_STATUS_LABELS[
-        status as keyof typeof FOLLOW_UP_STATUS_LABELS
-      ];
+  if (status === "not_started") {
+    return "New from report";
+  }
+
+  if (status === "resolved") {
+    return "Closed";
+  }
+
+  return FOLLOW_UP_STATUS_LABELS[
+    status as keyof typeof FOLLOW_UP_STATUS_LABELS
+  ];
 }
 
 function formatRoleLabel(role: string) {
@@ -73,6 +79,134 @@ function formatRoleLabel(role: string) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function DetailBlock({
+  label,
+  children,
+  quiet = false,
+}: {
+  label: string;
+  children: string;
+  quiet?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-input px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--rule)]",
+        quiet ? "bg-surface-2" : "bg-bg",
+      )}
+    >
+      <p className="font-mono text-[9.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-3">
+        {label}
+      </p>
+      <p className="mt-1.5 whitespace-pre-wrap break-words font-sans text-[13px] leading-[1.55] text-ink-2">
+        {children}
+      </p>
+    </div>
+  );
+}
+
+function CaseStateSummary({
+  item,
+  featured = false,
+  perspective = "admin-assigned",
+}: {
+  item: FollowUpQueueItem;
+  featured?: boolean;
+  perspective?: FollowUpCardProps["perspective"];
+}) {
+  if (!item.hasFollowUpCase) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(
+        "mt-4 rounded-card p-[18px]",
+        featured ? "bg-bg/10" : "bg-surface-2",
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p
+          className={cn(
+            "font-mono text-[9.5px] font-bold uppercase leading-none tracking-[0.18em]",
+            featured ? "text-bg/70" : "text-warm",
+          )}
+        >
+          {perspective === "leader-assigned"
+            ? "You were asked to follow up"
+            : "Office oversight"}
+        </p>
+        <Pill tone={statusTone[item.followUpStatus]}>
+          {getFollowUpStatusLabel(item.followUpStatus)}
+        </Pill>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <CareFact
+          label="Status"
+          value={getFollowUpStatusLabel(item.followUpStatus)}
+          featured={featured}
+        />
+        {item.lastContactDate ? (
+          <CareFact
+            label="Last contacted"
+            value={formatDate(item.lastContactDate)}
+            featured={featured}
+          />
+        ) : (
+          <CareFact label="Last contacted" value="Not recorded" featured={featured} />
+        )}
+      </div>
+
+      {item.nextAction || item.notes ? (
+        <div className="mt-3 grid gap-2">
+          {item.nextAction ? (
+            <DetailBlock label="Next action" quiet={featured}>
+              {item.nextAction}
+            </DetailBlock>
+          ) : null}
+          {item.notes ? (
+            <DetailBlock label="Notes" quiet={featured}>
+              {item.notes}
+            </DetailBlock>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CareFact({
+  label,
+  value,
+  featured = false,
+}: {
+  label: string;
+  value: string;
+  featured?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <p
+        className={cn(
+          "font-mono text-[9.5px] font-semibold uppercase leading-none tracking-[0.14em]",
+          featured ? "text-bg/60" : "text-ink-3",
+        )}
+      >
+        {label}
+      </p>
+      <p
+        className={cn(
+          "mt-1.5 break-words font-sans text-[13px] font-semibold leading-[1.35]",
+          featured ? "text-bg" : "text-ink",
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function CreateFollowUpCaseForm({
@@ -85,81 +219,78 @@ function CreateFollowUpCaseForm({
   return (
     <form
       action={createFollowUpCase}
-      className="grid gap-3 rounded-lg border border-primary/15 bg-[#FBFAF8] p-3 sm:p-4"
+      className="mt-4 grid gap-3 rounded-card bg-warm-soft p-[18px]"
     >
       <input type="hidden" name="absenteeRecordId" value={absenteeRecordId} />
 
+      <div>
+        <p className="font-mono text-[9.5px] font-bold uppercase leading-none tracking-[0.18em] text-warm">
+          Assign follow-up
+        </p>
+        <h4 className="mt-2 font-serif text-[17px] font-medium leading-[1.22] tracking-[-0.008em] text-ink">
+          Choose who should follow up on this absence.
+        </h4>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label htmlFor={`follow-up-assigned-to-${absenteeRecordId}`}>
-            Assigned leader
-          </Label>
-          <select
+        <Field
+          htmlFor={`follow-up-assigned-to-${absenteeRecordId}`}
+          label="Assigned leader"
+        >
+          <Select
             id={`follow-up-assigned-to-${absenteeRecordId}`}
             name="assignedTo"
             defaultValue=""
-            className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
           >
-            <option value="">Unassigned</option>
+            <option value="">Not assigned yet</option>
             {options.assignees.map((assignee) => (
               <option key={assignee.id} value={assignee.id}>
                 {assignee.name} - {formatRoleLabel(assignee.role)}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
 
-        <div className="grid gap-2">
-          <Label htmlFor={`follow-up-priority-${absenteeRecordId}`}>
-            Priority
-          </Label>
-          <select
+        <Field htmlFor={`follow-up-priority-${absenteeRecordId}`} label="Priority">
+          <Select
             id={`follow-up-priority-${absenteeRecordId}`}
             name="priority"
             defaultValue="normal"
-            className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
           >
             {TASK_PRIORITIES.map((priority) => (
               <option key={priority} value={priority}>
                 {TASK_PRIORITY_LABELS[priority]}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
       </div>
 
-      <div className="grid gap-2">
-        <Label htmlFor={`follow-up-next-action-${absenteeRecordId}`}>
-          Next action
-        </Label>
-        <Textarea
+      <Field
+        htmlFor={`follow-up-next-action-${absenteeRecordId}`}
+        label="Next action"
+      >
+        <TextArea
           id={`follow-up-next-action-${absenteeRecordId}`}
           name="nextAction"
           maxLength={500}
-          className="min-h-20 bg-background"
-          placeholder="Optional next step for this case."
+          className="min-h-24"
+          placeholder="Optional next step"
         />
-      </div>
+      </Field>
 
-      <div className="grid gap-2">
-        <Label htmlFor={`follow-up-notes-${absenteeRecordId}`}>Notes</Label>
-        <Textarea
+      <Field htmlFor={`follow-up-notes-${absenteeRecordId}`} label="Notes">
+        <TextArea
           id={`follow-up-notes-${absenteeRecordId}`}
           name="notes"
           maxLength={2000}
-          className="min-h-24 bg-background"
-          placeholder="Optional private context for follow-up."
+          placeholder="Optional private context for care"
         />
-      </div>
+      </Field>
 
-      <div className="border-t border-border/80 pt-1">
-        <Button
-          type="submit"
-          className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-        >
-          Create follow-up case
-        </Button>
-      </div>
+      <Button type="submit" variant="ink" className="w-full sm:w-fit">
+        Assign follow-up
+      </Button>
     </form>
   );
 }
@@ -176,81 +307,93 @@ function UpdateFollowUpCaseProgressForm({ item }: { item: FollowUpQueueItem }) {
   return (
     <form
       action={updateFollowUpCaseProgress}
-      className="grid gap-3 rounded-lg border border-border/80 bg-[#FBFAF8] p-3 sm:p-4"
+      className="mt-4 grid gap-3"
     >
       <input type="hidden" name="followUpCaseId" value={item.followUpCaseId} />
 
+      <div>
+        <p className="font-mono text-[9.5px] font-bold uppercase leading-none tracking-[0.18em] text-warm">
+          Contact record
+        </p>
+        <h4 className="mt-2 font-serif text-[17px] font-medium leading-[1.22] tracking-[-0.008em] text-ink">
+          Record the latest contact and next step.
+        </h4>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-2">
-          <Label htmlFor={`follow-up-status-${item.followUpCaseId}`}>
-            Status
-          </Label>
-          <select
+        <Field htmlFor={`follow-up-status-${item.followUpCaseId}`} label="Status">
+          <Select
             id={`follow-up-status-${item.followUpCaseId}`}
             name="status"
             defaultValue={item.followUpStatus}
-            className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
           >
             {statusOptions.map((status) => (
               <option key={status} value={status}>
-                {FOLLOW_UP_STATUS_LABELS[status]}
+                {getFollowUpStatusLabel(status)}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
 
-        <div className="grid gap-2">
-          <Label htmlFor={`follow-up-date-contacted-${item.followUpCaseId}`}>
-            Date contacted
-          </Label>
-          <input
+        <Field
+          htmlFor={`follow-up-date-contacted-${item.followUpCaseId}`}
+          label="Date contacted"
+        >
+          <TextInput
             id={`follow-up-date-contacted-${item.followUpCaseId}`}
             name="dateContacted"
             type="date"
             defaultValue={item.lastContactDate ?? ""}
             max={getTodayDateInput()}
-            className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
           />
-        </div>
+        </Field>
       </div>
 
-      <div className="grid gap-2">
-        <Label htmlFor={`follow-up-next-action-update-${item.followUpCaseId}`}>
-          Next action
-        </Label>
-        <Textarea
+      <Field
+        htmlFor={`follow-up-next-action-update-${item.followUpCaseId}`}
+        label="Next action"
+      >
+        <TextArea
           id={`follow-up-next-action-update-${item.followUpCaseId}`}
           name="nextAction"
           defaultValue={item.nextAction ?? ""}
           maxLength={500}
-          className="min-h-20 bg-background"
-          placeholder="Optional next step for this case."
+          className="min-h-24"
+          placeholder="Optional next step"
         />
-      </div>
+      </Field>
 
-      <div className="grid gap-2">
-        <Label htmlFor={`follow-up-notes-update-${item.followUpCaseId}`}>
-          Notes
-        </Label>
-        <Textarea
+      <Field
+        htmlFor={`follow-up-notes-update-${item.followUpCaseId}`}
+        label="Notes"
+      >
+        <TextArea
           id={`follow-up-notes-update-${item.followUpCaseId}`}
           name="notes"
           defaultValue={item.notes ?? ""}
           maxLength={2000}
-          className="min-h-24 bg-background"
-          placeholder="Optional private context for follow-up."
+          placeholder="Optional contact notes"
         />
-      </div>
+      </Field>
 
-      <div className="border-t border-border/80 pt-1">
-        <Button
-          type="submit"
-          className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-        >
-          Update follow-up
-        </Button>
-      </div>
+      <Button type="submit" variant="ink" className="w-full sm:w-fit">
+        Record contact
+      </Button>
     </form>
+  );
+}
+
+function UpdateFollowUpCaseDisclosure({ item }: { item: FollowUpQueueItem }) {
+  return (
+    <details className="mt-4 rounded-card bg-surface-2 p-[18px] shadow-[inset_0_0_0_1px_var(--rule)]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-input bg-bg px-3.5 py-3 font-sans text-[13.5px] font-semibold leading-none text-ink shadow-[inset_0_0_0_1px_var(--rule-strong)] marker:hidden [&::-webkit-details-marker]:hidden">
+        <span>Record contact</span>
+        <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+          Open form
+        </span>
+      </summary>
+      <UpdateFollowUpCaseProgressForm item={item} />
+    </details>
   );
 }
 
@@ -258,126 +401,112 @@ export function FollowUpCard({
   item,
   createOptions,
   canCreateCase = false,
+  featured = false,
+  perspective = item.hasFollowUpCase ? "admin-assigned" : "admin-new",
 }: FollowUpCardProps) {
+  const reason =
+    ABSENCE_REASON_LABELS[item.reason as keyof typeof ABSENCE_REASON_LABELS] ??
+    "No reason given";
+
   return (
-    <Card className="rounded-lg border-primary/15 bg-card shadow-[0_10px_28px_rgba(21,18,23,0.05)]">
-      <CardHeader className="gap-3 pb-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
-              {item.companyName}
-            </p>
-            <CardTitle className="mt-1 text-lg font-semibold">
-              {item.memberName}
-            </CardTitle>
-          </div>
-          <Badge
-            variant="outline"
+    <section
+      className={cn(
+        "rounded-card bg-surface p-[18px] text-ink shadow-lift",
+        featured && "bg-ink text-bg",
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p
             className={cn(
-              "h-6 rounded-4xl px-2.5 text-[0.7rem] font-semibold uppercase tracking-normal",
-              followUpStatusClasses[item.followUpStatus],
+              "font-mono text-[9.5px] font-bold uppercase leading-none tracking-[0.18em]",
+              featured ? "text-bg/70" : "text-ink-3",
             )}
           >
-            {getFollowUpStatusLabel(item.followUpStatus)}
-          </Badge>
+            {item.companyName}
+          </p>
+          <h3
+            className={cn(
+              "mt-2 break-words font-serif text-[18px] font-medium leading-[1.22] tracking-[-0.008em] text-pretty",
+              featured ? "text-bg" : "text-ink",
+            )}
+          >
+            {item.memberName}
+          </h3>
+          <p
+            className={cn(
+              "mt-1 font-sans text-xs font-medium leading-snug",
+              featured ? "text-bg/70" : "text-ink-3",
+            )}
+          >
+            {item.contextDateLabel} {formatDate(item.absenceDate)}
+          </p>
         </div>
-      </CardHeader>
+        <Pill tone={statusTone[item.followUpStatus]}>
+          {getFollowUpStatusLabel(item.followUpStatus)}
+        </Pill>
+      </div>
 
-      <CardContent className="grid gap-4">
-        <div className="grid gap-3 rounded-lg border border-primary/15 bg-[#F6F1EB] p-3 sm:grid-cols-3 sm:p-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-              {item.contextDateLabel}
-            </p>
-            <p className="mt-1 font-medium text-foreground">
-              {formatDate(item.absenceDate)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-              Reason
-            </p>
-            <p className="mt-1 font-medium text-foreground">
-              {ABSENCE_REASON_LABELS[
-                item.reason as keyof typeof ABSENCE_REASON_LABELS
-              ] ?? "No reason given"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
-              Report status
-            </p>
-            <p className="mt-1 font-medium text-foreground">
-              {getReportStatusLabel(item.weeklyReportStatus)}
-            </p>
-          </div>
+      <div
+        className={cn(
+          "mt-4 grid gap-3 rounded-input p-3 sm:grid-cols-3",
+          featured ? "bg-bg/10" : "bg-bg",
+        )}
+      >
+        <CareFact label="Reason" value={reason} featured={featured} />
+        <CareFact
+          label="Report"
+          value={getReportStatusLabel(item.weeklyReportStatus)}
+          featured={featured}
+        />
+        <CareFact
+          label="Assigned"
+          value={item.assignedUserName ?? "Not assigned yet"}
+          featured={featured}
+        />
+      </div>
+
+      <div
+        className={cn(
+          "mt-3 flex flex-wrap gap-2 font-sans text-xs font-medium leading-[1.4]",
+          featured ? "text-bg/75" : "text-ink-3",
+        )}
+      >
+        <span>Week of {formatDate(item.reportWeekStart)}</span>
+        <span aria-hidden="true">/</span>
+        <span>
+          {item.hasFollowUpCase ? "Follow-up assigned" : "New from report"}
+        </span>
+        {item.lastContactDate ? (
+          <>
+            <span aria-hidden="true">/</span>
+            <span>Last contacted {formatDate(item.lastContactDate)}</span>
+          </>
+        ) : null}
+      </div>
+
+      <CaseStateSummary
+        item={item}
+        featured={featured}
+        perspective={perspective}
+      />
+
+      {item.reasonNote ? (
+        <div className="mt-4 grid gap-2">
+          <DetailBlock label="Leader note" quiet={featured}>
+            {item.reasonNote}
+          </DetailBlock>
         </div>
+      ) : null}
 
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline">
-            Week {formatDate(item.reportWeekStart)}
-          </Badge>
-          {item.hasFollowUpCase ? (
-            <Badge variant="secondary">Case linked</Badge>
-          ) : (
-            <Badge variant="outline">No case yet</Badge>
-          )}
-          {item.assignedUserName ? (
-            <Badge variant="outline">{item.assignedUserName}</Badge>
-          ) : null}
-          {item.lastContactDate ? (
-            <Badge variant="outline">
-              Last contact {formatDate(item.lastContactDate)}
-            </Badge>
-          ) : null}
-        </div>
+      {canCreateCase && !item.hasFollowUpCase && createOptions ? (
+        <CreateFollowUpCaseForm
+          absenteeRecordId={item.absenteeRecordId}
+          options={createOptions}
+        />
+      ) : null}
 
-        {item.nextAction || item.notes ? (
-          <div className="grid gap-3">
-            {item.nextAction ? (
-              <div className="rounded-lg border border-border/80 bg-white px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
-                  Next action
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {item.nextAction}
-                </p>
-              </div>
-            ) : null}
-
-            {item.notes ? (
-              <div className="rounded-lg border border-border/80 bg-white px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
-                  Case notes
-                </p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {item.notes}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
-        {item.reasonNote ? (
-          <div className="rounded-lg border border-border/80 bg-white px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-normal text-primary/70">
-              Leader note
-            </p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              {item.reasonNote}
-            </p>
-          </div>
-        ) : null}
-
-        {canCreateCase && !item.hasFollowUpCase && createOptions ? (
-          <CreateFollowUpCaseForm
-            absenteeRecordId={item.absenteeRecordId}
-            options={createOptions}
-          />
-        ) : null}
-
-        {item.canUpdateCase ? <UpdateFollowUpCaseProgressForm item={item} /> : null}
-      </CardContent>
-    </Card>
+      {item.canUpdateCase ? <UpdateFollowUpCaseDisclosure item={item} /> : null}
+    </section>
   );
 }

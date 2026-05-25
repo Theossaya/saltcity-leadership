@@ -379,3 +379,37 @@ The reports experience was migrated to the approved SaltCity Leadership Briefing
 
 - Restored draft reports to visible admin overview coverage with a distinct in-progress section and draft progress count.
 - Checked Reports V2 bottom-nav clearance; the existing AppShell bottom padding keeps report content and actions above the floating nav.
+
+## Phase 13C — V2 Follow-up / Care migration
+
+The follow-up experience was migrated to the approved SaltCity Leadership Briefing System as a visual and usability pass:
+
+- Migrated `/follow-up` from a follow-up/ticket-style page to a pastoral care operations layout with V2 greeting, care language, compact counters, and token-based status treatment.
+- Restyled the active care queue with urgent cases prioritized first, a stronger dark care block for the first urgent/escalated case when present, assigned-to-you visibility for leaders, and calm active queue cards.
+- Restyled the existing create/update care forms while preserving the same field names, status options, resolved-at behavior, Server Actions, validation, permissions, and update/create logic.
+- Restyled recently resolved history as read-only V2 care records with absence context, resolved timing, final next action, final notes, and original leader note when available.
+- Added V2 empty states for no active care cases, no assigned care cases, and no recently resolved care cases.
+- Made no database schema, SQL migration, RLS policy, Supabase query behavior, Server Action behavior, validation, permission, route, form field name, mutation, or business-logic changes.
+
+### Phase 13C follow-up case creation manual-test fix
+
+- Fixed the follow-up case creation failure path found during manual testing by validating the selected assignee server-side against active same-church membership before insert and returning specific create-error states for duplicate cases, missing absentee records, invalid assignees, permission failures, and unknown insert failures.
+- Added safe insert-failure diagnostics for follow-up case creation with Supabase error code/message/details/hint and non-private context only: absentee record ID, company ID, company member ID, assigned-to presence, and priority.
+- Kept the Begin care form field names and insert payload aligned with the existing Server Action: `absenteeRecordId`, `assignedTo`, `priority`, `nextAction`, and `notes`.
+- Made no database schema, SQL migration, RLS policy, permission model, follow-up update logic, reports logic, or resolved-history behavior changes.
+
+### Phase 13C follow-up case INSERT RLS recursion fix
+
+- Manual testing confirmed `follow_up_cases` INSERT failed with Postgres `42P17` infinite recursion because the active INSERT policy directly queried `absentee_records`, while assigned-user absentee visibility policies query `follow_up_cases`.
+- Added `supabase/sql/019_follow_up_case_insert_rls_recursion_fix.sql` to replace the recursive INSERT policy checks with fixed-search-path SECURITY DEFINER helpers for absentee-record matching and active same-church assignee validation.
+- Recreated `follow_up_cases_admin_create_from_absentee` so it no longer directly queries `absentee_records` or `follow_up_cases`, while preserving the same admin-only insert requirements.
+- Added a church-scoped partial unique index for one active follow-up case per absentee record without adding an RLS self-reference.
+- Made no UI, Server Action behavior, validation, permission model, follow-up update logic, reports logic, or resolved-history behavior changes.
+
+### Phase 13C follow-up UX simplification
+
+- Simplified `/follow-up` from case-management language into a church-office care workflow based on submitted absentee records.
+- Admins now see `New from reports`, `Assigned follow-up`, `Needs pastor / urgent`, and `Recently closed`, with absentee records that do not yet have follow-up shown only under admin office review.
+- Company leaders now see only `Assigned to you` and `Recently closed`; unassigned/new absentee records remain saved with reports but are not shown to leaders as active follow-up.
+- Reworded actions and labels toward office care language: `Assign follow-up`, `Record contact`, `New from report`, `Not assigned yet`, and `Closed`.
+- Kept forms collapsed by default and preserved the existing form field names, Server Actions, permissions, query helpers, reports workflow, SQL/RLS model, and follow-up status behavior.

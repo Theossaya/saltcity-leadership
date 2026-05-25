@@ -10,10 +10,15 @@ import {
   followUpCaseProgressUpdateSchema,
 } from "@/lib/validation/follow-up";
 
-const CREATE_FOLLOW_UP_CASE_ERROR_PATH =
-  "/follow-up?error=unable-to-create-case";
 const UPDATE_FOLLOW_UP_CASE_ERROR_PATH =
   "/follow-up?error=unable-to-update-case";
+
+type CreateFollowUpCaseError =
+  | "duplicate-case"
+  | "invalid-absentee"
+  | "invalid-assignee"
+  | "permission-denied"
+  | "unable-to-create-case";
 
 type AbsenteeRecordRow = {
   id: string;
@@ -27,6 +32,17 @@ type FollowUpCaseRow = {
   church_id: string;
   assigned_to: string | null;
 };
+
+type SupabaseWriteError = {
+  code?: string;
+  message?: string;
+  details?: string | null;
+  hint?: string | null;
+};
+
+function getCreateFollowUpCaseErrorPath(error: CreateFollowUpCaseError) {
+  return `/follow-up?error=${error}`;
+}
 
 function canCreateFollowUpCase(role: string | null) {
   return role === "church_admin" || role === "super_admin";
@@ -42,6 +58,36 @@ function getFormString(formData: FormData, key: string) {
   return typeof value === "string" ? value : "";
 }
 
+function logFollowUpCaseCreateInsertFailure({
+  error,
+  absenteeRecordId,
+  companyId,
+  companyMemberId,
+  assignedTo,
+  priority,
+}: {
+  error: SupabaseWriteError;
+  absenteeRecordId: string;
+  companyId: string | null;
+  companyMemberId: string | null;
+  assignedTo: string | null | undefined;
+  priority: string;
+}) {
+  console.error("follow_up_case_create_insert_failed", {
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    hint: error.hint,
+    context: {
+      absenteeRecordId,
+      companyId,
+      companyMemberId,
+      hasAssignedTo: Boolean(assignedTo),
+      priority,
+    },
+  });
+}
+
 export async function createFollowUpCase(formData: FormData) {
   const { user, primaryRole, churchId } = await getCurrentUser();
 
@@ -50,7 +96,7 @@ export async function createFollowUpCase(formData: FormData) {
   }
 
   if (!canCreateFollowUpCase(primaryRole) || !churchId) {
-    redirect(CREATE_FOLLOW_UP_CASE_ERROR_PATH);
+    redirect(getCreateFollowUpCaseErrorPath("permission-denied"));
   }
 
   const parsed = followUpCaseCreateSchema.safeParse({
@@ -62,10 +108,27 @@ export async function createFollowUpCase(formData: FormData) {
   });
 
   if (!parsed.success) {
-    redirect(CREATE_FOLLOW_UP_CASE_ERROR_PATH);
+    redirect(getCreateFollowUpCaseErrorPath("unable-to-create-case"));
   }
 
   const supabase = await createClient();
+
+  if (parsed.data.assignedTo) {
+    const { data: assigneeMembership, error: assigneeMembershipError } =
+      await supabase
+        .from("church_memberships")
+        .select("user_id")
+        .eq("church_id", churchId)
+        .eq("user_id", parsed.data.assignedTo)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle<{ user_id: string }>();
+
+    if (assigneeMembershipError || !assigneeMembership) {
+      redirect(getCreateFollowUpCaseErrorPath("invalid-assignee"));
+    }
+  }
+
   const { data: absenteeRecord, error: absenteeRecordError } = await supabase
     .from("absentee_records")
     .select("id, church_id, company_id, company_member_id")
@@ -74,7 +137,7 @@ export async function createFollowUpCase(formData: FormData) {
     .maybeSingle<AbsenteeRecordRow>();
 
   if (absenteeRecordError || !absenteeRecord) {
-    redirect(CREATE_FOLLOW_UP_CASE_ERROR_PATH);
+    redirect(getCreateFollowUpCaseErrorPath("invalid-absentee"));
   }
 
   const { data: existingCase, error: existingCaseError } = await supabase
@@ -87,7 +150,11 @@ export async function createFollowUpCase(formData: FormData) {
     .maybeSingle<{ id: string }>();
 
   if (existingCaseError || existingCase) {
-    redirect(CREATE_FOLLOW_UP_CASE_ERROR_PATH);
+    redirect(
+      getCreateFollowUpCaseErrorPath(
+        existingCase ? "duplicate-case" : "unable-to-create-case",
+      ),
+    );
   }
 
   const { error } = await supabase.from("follow_up_cases").insert({
@@ -105,7 +172,28 @@ export async function createFollowUpCase(formData: FormData) {
   });
 
   if (error) {
-    redirect(CREATE_FOLLOW_UP_CASE_ERROR_PATH);
+    logFollowUpCaseCreateInsertFailure({
+      error,
+      absenteeRecordId: absenteeRecord.id,
+      companyId: absenteeRecord.company_id,
+      companyMemberId: absenteeRecord.company_member_id,
+      assignedTo: parsed.data.assignedTo,
+      priority: parsed.data.priority,
+    });
+
+    if (error.code === "23505") {
+      redirect(getCreateFollowUpCaseErrorPath("duplicate-case"));
+    }
+
+    if (error.code === "23503") {
+      redirect(getCreateFollowUpCaseErrorPath("invalid-assignee"));
+    }
+
+    if (error.code === "42501") {
+      redirect(getCreateFollowUpCaseErrorPath("permission-denied"));
+    }
+
+    redirect(getCreateFollowUpCaseErrorPath("unable-to-create-case"));
   }
 
   revalidatePath("/follow-up");
