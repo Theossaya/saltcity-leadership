@@ -1,27 +1,88 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
+  Bell,
+  BookOpen,
   Building2,
   CalendarDays,
-  ChevronRight,
   FileArchive,
+  LogOut,
   Megaphone,
+  Palette,
   Settings,
+  Shield,
   UsersRound,
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
+import { V2Greeting } from "@/components/v2/chrome/v2-greeting";
+import { V2Sect } from "@/components/v2/chrome/v2-sect";
+import { Button as V2Button } from "@/components/v2/primitives/button";
+import { IndexRow } from "@/components/v2/rows/index-row";
+import { logout } from "@/features/auth/actions";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 
-const futureSections = [
-  { label: "Companies", href: "/companies", icon: Building2 },
-  { label: "Announcements", href: "/announcements", icon: Megaphone },
-  { label: "Events", href: "/events", icon: CalendarDays },
-  { label: "Documents", href: "#", icon: FileArchive },
-  { label: "Units", href: "#", icon: UsersRound },
-  { label: "Settings", href: "#", icon: Settings },
+const availableSections = [
+  {
+    title: "Announcements",
+    description: "Official notices from the church office.",
+    href: "/announcements",
+    icon: Megaphone,
+  },
+  {
+    title: "Events",
+    description: "Services and leadership calendar.",
+    href: "/events",
+    icon: CalendarDays,
+  },
+  {
+    title: "Companies",
+    description: "Member and leadership directory.",
+    href: "/companies",
+    icon: Building2,
+  },
+  {
+    title: "Care",
+    description: "Assigned follow-up and recently closed care.",
+    href: "/follow-up",
+    icon: Shield,
+  },
+  {
+    title: "Reports",
+    description: "Weekly company report workspace.",
+    href: "/reports",
+    icon: BookOpen,
+  },
+];
+
+const comingSoonSections = [
+  {
+    title: "Documents",
+    description: "Leadership resources and internal files.",
+    icon: FileArchive,
+  },
+  {
+    title: "Units",
+    description: "Unit-level planning will come after the MVP core.",
+    icon: UsersRound,
+  },
+];
+
+const settingsSections = [
+  {
+    title: "Notifications",
+    description: "Leadership alerts and reminders.",
+    icon: Bell,
+  },
+  {
+    title: "Display & language",
+    description: "Theme and language preferences.",
+    icon: Palette,
+  },
+  {
+    title: "Account & access",
+    description: "Your role, church access, and session.",
+    icon: Settings,
+  },
 ];
 
 export default async function MorePage() {
@@ -39,44 +100,89 @@ export default async function MorePage() {
       role={primaryRole}
       churchName={church?.name}
     >
-      <PageHeader
-        title="More"
-        subtitle="Church leadership tools and app sections in one place."
+      <V2Greeting
+        eyebrow="Index"
+        title={
+          <>
+            Everything <em>else.</em>
+          </>
+        }
+        subtitle="The supporting leadership tools are grouped here so the main tabs can stay focused."
       />
 
-      <Card className="rounded-lg border-primary/15 bg-[#FBFAF8] shadow-[0_14px_36px_rgba(21,18,23,0.06)]">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-base font-semibold">App sections</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-2 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-2">
-            {futureSections.map((section) => {
-              const Icon = section.icon;
-              const isFuture = section.href === "#";
+      <V2Sect>Available</V2Sect>
+      <section className="rounded-card bg-surface px-5 py-1 shadow-lift">
+        {availableSections.map((section, index) => {
+          const Icon = section.icon;
 
-              return (
-                <Link
-                  key={section.label}
-                  href={section.href}
-                  className="flex min-h-14 items-center justify-between gap-3 rounded-lg border border-border/70 bg-white px-3 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-[#FBFAF8]"
-                  aria-disabled={isFuture ? "true" : undefined}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-white text-primary">
-                      <Icon className="size-4" aria-hidden="true" />
-                    </span>
-                    <span className="truncate">{section.label}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                    {isFuture ? "Future" : "Open"}
-                    <ChevronRight className="size-4" aria-hidden="true" />
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+          return (
+            <IndexRow
+              key={section.href}
+              index={String(index + 1).padStart(2, "0")}
+              title={section.title}
+              description={section.description}
+              href={section.href}
+              label="Open"
+              tone="care"
+              icon={<Icon className="size-4" strokeWidth={1.75} aria-hidden="true" />}
+            />
+          );
+        })}
+      </section>
+
+      <V2Sect action="Not yet available">Coming soon</V2Sect>
+      <section className="rounded-card bg-surface-2 px-5 py-1 shadow-lift">
+        {comingSoonSections.map((section, index) => {
+          const Icon = section.icon;
+
+          return (
+            <IndexRow
+              key={section.title}
+              index={String(index + 1).padStart(2, "0")}
+              title={section.title}
+              description={section.description}
+              label="Soon"
+              tone="quiet"
+              disabled
+              icon={<Icon className="size-4" strokeWidth={1.75} aria-hidden="true" />}
+            />
+          );
+        })}
+      </section>
+
+      <V2Sect>Settings</V2Sect>
+      <section className="rounded-card bg-surface px-5 py-1 shadow-lift">
+        {settingsSections.map((section, index) => {
+          const Icon = section.icon;
+
+          return (
+            <IndexRow
+              key={section.title}
+              index={String(index + 1).padStart(2, "0")}
+              title={section.title}
+              description={section.description}
+              label="Soon"
+              tone="quiet"
+              disabled
+              icon={<Icon className="size-4" strokeWidth={1.75} aria-hidden="true" />}
+            />
+          );
+        })}
+      </section>
+
+      <V2Sect>Session</V2Sect>
+      <section className="rounded-card bg-surface p-[18px] shadow-lift">
+        <form action={logout}>
+          <V2Button type="submit" variant="soft" className="w-full">
+            <LogOut className="size-4" strokeWidth={1.75} aria-hidden="true" />
+            Sign out
+          </V2Button>
+        </form>
+      </section>
+
+      <footer className="py-8 text-center font-serif text-[13.5px] italic leading-[1.45] text-ink-3">
+        SaltCity leadership, ordered with care.
+      </footer>
     </AppShell>
   );
 }

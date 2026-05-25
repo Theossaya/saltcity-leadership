@@ -2,23 +2,29 @@ import { redirect } from "next/navigation";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
-import { QueryNotice } from "@/components/ui/query-notice";
+import { V2Greeting } from "@/components/v2/chrome/v2-greeting";
+import { V2Sect } from "@/components/v2/chrome/v2-sect";
+import { CompanyHero } from "@/components/v2/modules/company-hero";
+import { Button as V2Button } from "@/components/v2/primitives/button";
+import {
+  Field,
+  Select,
+  TextInput,
+} from "@/components/v2/primitives/field";
+import { Pill } from "@/components/v2/primitives/pill";
+import { MemberRow } from "@/components/v2/rows/member-row";
+import { PersonRow } from "@/components/v2/rows/person-row";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import { createCompanyMember } from "@/features/companies/actions";
-import { CompanyCard } from "@/features/companies/components/company-card";
-import { CompanyEmptyState } from "@/features/companies/components/company-empty-state";
-import { MemberList } from "@/features/companies/components/member-list";
 import {
   getActiveCompaniesForMemberCreate,
   getAdminCompaniesOverview,
   getAssignedCompanyDetails,
   getCompanyMembers,
   type ActiveCompanyOption,
+  type AdminCompanyOverview,
+  type CompanyLeadership,
+  type CompanyMember,
 } from "@/features/companies/queries";
 
 type CompaniesPageProps = {
@@ -28,6 +34,26 @@ type CompaniesPageProps = {
   }>;
 };
 
+function formatJoinedDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "Africa/Lagos",
+  }).format(new Date(value));
+}
+
+function EmptyDirectory({ title, message }: { title: string; message: string }) {
+  return (
+    <section className="rounded-card bg-surface p-[18px] text-center shadow-lift">
+      <h2 className="font-serif text-[18px] font-medium leading-tight text-ink text-pretty">
+        {title}
+      </h2>
+      <p className="mt-2 font-sans text-sm leading-6 text-ink-2">{message}</p>
+    </section>
+  );
+}
+
 function CreateCompanyMemberForm({
   companies,
 }: {
@@ -36,22 +62,19 @@ function CreateCompanyMemberForm({
   const hasCompanies = companies.length > 0;
 
   return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">
+    <>
+      <V2Sect>Church office</V2Sect>
+      <details className="rounded-card bg-surface p-[18px] shadow-lift">
+        <summary className="cursor-pointer list-none font-serif text-[18px] font-medium leading-tight text-ink marker:hidden">
           Add company member
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form action={createCompanyMember} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="company-member-company">Company</Label>
-            <select
+        </summary>
+        <form action={createCompanyMember} className="mt-4 grid gap-4">
+          <Field htmlFor="company-member-company" label="Company">
+            <Select
               id="company-member-company"
               name="companyId"
               required
               disabled={!hasCompanies}
-              className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
             >
               {hasCompanies ? null : (
                 <option value="">No active companies available</option>
@@ -61,58 +84,128 @@ function CreateCompanyMemberForm({
                   {company.name}
                 </option>
               ))}
-            </select>
-          </div>
+            </Select>
+          </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="company-member-full-name">Full name</Label>
-            <Input
+          <Field htmlFor="company-member-full-name" label="Full name">
+            <TextInput
               id="company-member-full-name"
               name="fullName"
               maxLength={160}
               required
-              className="h-12 bg-background"
               placeholder="Member name"
             />
-          </div>
+          </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="company-member-phone">Phone</Label>
-              <Input
+            <Field htmlFor="company-member-phone" label="Phone">
+              <TextInput
                 id="company-member-phone"
                 name="phone"
                 maxLength={40}
-                className="h-12 bg-background"
                 placeholder="Optional"
               />
-            </div>
+            </Field>
 
-            <div className="grid gap-2">
-              <Label htmlFor="company-member-email">Email</Label>
-              <Input
+            <Field htmlFor="company-member-email" label="Email">
+              <TextInput
                 id="company-member-email"
                 name="email"
                 type="email"
                 maxLength={254}
-                className="h-12 bg-background"
                 placeholder="Optional"
               />
-            </div>
+            </Field>
           </div>
 
-          <div className="border-t border-border/80 pt-1">
-            <Button
-              type="submit"
-              disabled={!hasCompanies}
-              className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-            >
-              Add member
-            </Button>
-          </div>
+          <V2Button type="submit" disabled={!hasCompanies} className="w-full sm:w-fit">
+            Add member
+          </V2Button>
         </form>
-      </CardContent>
-    </Card>
+      </details>
+    </>
+  );
+}
+
+function LeadershipSection({ company }: { company: CompanyLeadership }) {
+  return (
+    <>
+      <V2Sect>Leadership</V2Sect>
+      <section className="rounded-card bg-surface p-[18px] shadow-lift">
+        <PersonRow
+          name={company.leaderName || "No leader assigned"}
+          sub="Company leader"
+          pill={company.leaderName ? "Read-only" : "Open"}
+          tone={company.leaderName ? "quiet" : "care"}
+        />
+        <PersonRow
+          name={company.assistantLeaderName || "No assistant assigned"}
+          sub="Assistant leader"
+          pill={company.assistantLeaderName ? "Read-only" : "Open"}
+          tone={company.assistantLeaderName ? "quiet" : "care"}
+        />
+      </section>
+    </>
+  );
+}
+
+function MemberRows({ members }: { members: CompanyMember[] }) {
+  if (members.length === 0) {
+    return (
+      <EmptyDirectory
+        title="No members found."
+        message="Company members will appear here when they are added by an admin."
+      />
+    );
+  }
+
+  return (
+    <section className="rounded-card bg-surface p-[18px] shadow-lift">
+      {members.map((member) => {
+        const contact = [member.phone, member.email].filter(Boolean).join(" · ");
+
+        return (
+          <MemberRow
+            key={member.id}
+            name={member.fullName}
+            status={member.status}
+            meta={`Added ${formatJoinedDate(member.createdAt)}`}
+            detail={contact || "No contact details on record"}
+          />
+        );
+      })}
+    </section>
+  );
+}
+
+function AdminCompanyModule({ company }: { company: AdminCompanyOverview }) {
+  return (
+    <article className="grid gap-3">
+      <CompanyHero
+        name={company.name}
+        descriptor="Leadership assignment and active member count for reporting."
+        status={company.status}
+        members={company.memberCount}
+        leader={company.leaderName}
+        assistant={company.assistantLeaderName}
+      />
+      <section className="rounded-card bg-surface p-[18px] shadow-lift">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="break-words font-serif text-[18px] font-medium leading-tight text-ink">
+              Directory snapshot
+            </h2>
+            <p className="mt-1 font-sans text-xs leading-[1.45] text-ink-3">
+              {company.leaderName || "No leader assigned"} ·{" "}
+              {company.assistantLeaderName || "No assistant assigned"}
+            </p>
+          </div>
+          <Pill tone={company.status === "active" ? "ok" : "quiet"}>
+            {company.memberCount} members
+          </Pill>
+        </div>
+      </section>
+    </article>
   );
 }
 
@@ -136,41 +229,26 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     primaryRole === "church_admin" || primaryRole === "super_admin";
   const isCompanyLeader =
     primaryRole === "company_leader" || primaryRole === "assistant_leader";
-  const actionNotice = (
-    <>
-      {memberCreated ? (
-        <Alert className="border-[#C8BDAF] bg-[#FBFAF8]">
-          <AlertDescription>Company member added.</AlertDescription>
-        </Alert>
-      ) : null}
-
-      {createMemberError ? (
-        <Alert variant="destructive">
-          <AlertDescription>
-            Company member could not be added.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-    </>
-  );
 
   let content = (
-    <CompanyEmptyState title="Company visibility is limited">
-      <p>
-        Company structure will appear here when your leadership role is assigned
-        to a company.
-      </p>
-    </CompanyEmptyState>
+    <>
+      <V2Sect>Directory access</V2Sect>
+      <EmptyDirectory
+        title="Company visibility is limited."
+        message="Company structure will appear here when your leadership role is assigned to a company."
+      />
+    </>
   );
 
   if (!churchId) {
     content = (
-      <CompanyEmptyState title="No active church membership found">
-        <p>
-          Company visibility depends on an active church membership. Ask an
-          admin to confirm your access.
-        </p>
-      </CompanyEmptyState>
+      <>
+        <V2Sect>Directory access</V2Sect>
+        <EmptyDirectory
+          title="No active church membership found."
+          message="Company visibility depends on an active church membership. Ask an admin to confirm your access."
+        />
+      </>
     );
   } else if (isAdmin) {
     const [companiesResult, createOptionsResult] = await Promise.all([
@@ -180,32 +258,41 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
 
     content = (
       <>
+        {memberCreated ? (
+          <Alert className="mt-4 rounded-card border-0 bg-ok-bg text-ok">
+            <AlertDescription>Company member added.</AlertDescription>
+          </Alert>
+        ) : null}
+        {createMemberError ? (
+          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+            <AlertDescription>Company member could not be added.</AlertDescription>
+          </Alert>
+        ) : null}
         {companiesResult.error ? (
-          <QueryNotice message={companiesResult.error} />
+          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+            <AlertDescription>{companiesResult.error}</AlertDescription>
+          </Alert>
         ) : null}
         {createOptionsResult.error ? (
-          <QueryNotice message={createOptionsResult.error} />
+          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+            <AlertDescription>{createOptionsResult.error}</AlertDescription>
+          </Alert>
         ) : null}
 
         <CreateCompanyMemberForm companies={createOptionsResult.data} />
 
+        <V2Sect action={`${companiesResult.data.length}`}>Companies</V2Sect>
         {companiesResult.data.length > 0 ? (
-          <section className="grid gap-3">
+          <div className="grid gap-4">
             {companiesResult.data.map((company) => (
-              <CompanyCard
-                key={company.id}
-                company={company}
-                memberCount={company.memberCount}
-              />
+              <AdminCompanyModule key={company.id} company={company} />
             ))}
-          </section>
+          </div>
         ) : (
-          <CompanyEmptyState title="No companies found">
-            <p>
-              Company structure will appear here after companies are added for
-              this church.
-            </p>
-          </CompanyEmptyState>
+          <EmptyDirectory
+            title="No companies found."
+            message="Company structure will appear here after companies are added for this church."
+          />
         )}
       </>
     );
@@ -214,43 +301,51 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     const membersResult = companyResult.data
       ? await getCompanyMembers(companyResult.data.id, churchId)
       : { data: [], error: null };
+    const activeMembers = membersResult.data.filter(
+      (member) => member.status === "active",
+    );
 
     content = companyResult.error && !companyResult.data ? (
-      <QueryNotice message={companyResult.error} />
+      <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+        <AlertDescription>{companyResult.error}</AlertDescription>
+      </Alert>
     ) : companyResult.data ? (
       <>
-        {companyResult.error ? <QueryNotice message={companyResult.error} /> : null}
-        {membersResult.error ? <QueryNotice message={membersResult.error} /> : null}
+        {companyResult.error ? (
+          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+            <AlertDescription>{companyResult.error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {membersResult.error ? (
+          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+            <AlertDescription>{membersResult.error}</AlertDescription>
+          </Alert>
+        ) : null}
 
-        <CompanyCard company={companyResult.data} emphasis />
-
-        <section className="grid gap-3">
-          <div className="grid gap-1">
-            <h2 className="text-xl font-semibold text-foreground">Members</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Read-only member visibility for weekly reporting.
-            </p>
-          </div>
-
-          {membersResult.data.length > 0 ? (
-            <MemberList members={membersResult.data} />
-          ) : (
-            <CompanyEmptyState title="No members found">
-              <p>
-                Company members will appear here when they are added by an
-                admin.
-              </p>
-            </CompanyEmptyState>
-          )}
+        <section className="mt-[18px]">
+          <CompanyHero
+            name={companyResult.data.name}
+            descriptor="Read-only company visibility for weekly reporting."
+            status={companyResult.data.status}
+            members={activeMembers.length}
+            leader={companyResult.data.leaderName}
+            assistant={companyResult.data.assistantLeaderName}
+          />
         </section>
+
+        <LeadershipSection company={companyResult.data} />
+
+        <V2Sect action={`${activeMembers.length} active`}>Members</V2Sect>
+        <MemberRows members={membersResult.data} />
       </>
     ) : (
-      <CompanyEmptyState title="No assigned company found">
-        <p>
-          Your company view will appear when an admin assigns you as a company
-          leader or assistant leader.
-        </p>
-      </CompanyEmptyState>
+      <>
+        <V2Sect>Directory access</V2Sect>
+        <EmptyDirectory
+          title="No assigned company found."
+          message="Your company view will appear when an admin assigns you as a company leader or assistant leader."
+        />
+      </>
     );
   }
 
@@ -260,16 +355,25 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
       role={primaryRole}
       churchName={church?.name}
     >
-      <PageHeader
-        title={isCompanyLeader ? "My Company" : "Companies"}
+      <V2Greeting
+        eyebrow="Company directory"
+        title={
+          isCompanyLeader ? (
+            <>
+              Your <em>company.</em>
+            </>
+          ) : (
+            <>
+              Companies & <em>leaders.</em>
+            </>
+          )
+        }
         subtitle={
           isCompanyLeader
-            ? "Assigned company structure and member visibility for reporting."
-            : "Company structure, leadership assignments, and member counts."
+            ? "A read-only directory for the people connected to your weekly report."
+            : "A member and leadership directory for company-based reporting."
         }
       />
-
-      {actionNotice}
 
       {content}
     </AppShell>

@@ -2,20 +2,22 @@ import { redirect } from "next/navigation";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
-import { QueryNotice } from "@/components/ui/query-notice";
-import { Textarea } from "@/components/ui/textarea";
+import { V2Greeting } from "@/components/v2/chrome/v2-greeting";
+import { V2Sect } from "@/components/v2/chrome/v2-sect";
+import { Button as V2Button } from "@/components/v2/primitives/button";
+import { Counter } from "@/components/v2/primitives/counter";
+import {
+  Field,
+  Select,
+  TextArea,
+  TextInput,
+} from "@/components/v2/primitives/field";
+import { Pill } from "@/components/v2/primitives/pill";
 import { createAnnouncement } from "@/features/announcements/actions";
-import { AnnouncementCard } from "@/features/announcements/components/announcement-card";
-import { AnnouncementEmptyState } from "@/features/announcements/components/announcement-empty-state";
-import { AnnouncementSummaryCard } from "@/features/announcements/components/announcement-summary-card";
 import {
   getAdminAnnouncements,
   getLeaderAnnouncements,
+  type AnnouncementListItem,
   type AnnouncementOverview,
 } from "@/features/announcements/queries";
 import { getCurrentUser } from "@/features/auth/get-current-user";
@@ -35,143 +37,268 @@ function formatRoleLabel(role: string) {
     .join(" ");
 }
 
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Lagos",
+  }).format(new Date(value));
+}
+
+function EmptyNotice({ title, message }: { title: string; message: string }) {
+  return (
+    <section className="rounded-card bg-surface p-[18px] text-center shadow-lift">
+      <h2 className="font-serif text-[18px] font-medium leading-tight text-ink text-pretty">
+        {title}
+      </h2>
+      <p className="mt-2 font-sans text-sm leading-6 text-ink-2">{message}</p>
+    </section>
+  );
+}
+
 function RestrictedState() {
   return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">
-          Announcement access
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Announcement visibility is limited to active church leaders and
-          church admins.
-        </p>
-      </CardContent>
-    </Card>
+    <>
+      <V2Sect>Notice access</V2Sect>
+      <EmptyNotice
+        title="Announcements are limited to leaders."
+        message="Official notices appear for active church leaders and church admins."
+      />
+    </>
   );
 }
 
 function CreateAnnouncementForm() {
   return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">
-          Create announcement
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form action={createAnnouncement} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="announcement-title">Title</Label>
-            <Input
+    <>
+      <V2Sect>Church office</V2Sect>
+      <details className="rounded-card bg-surface p-[18px] shadow-lift">
+        <summary className="cursor-pointer list-none font-serif text-[18px] font-medium leading-tight text-ink marker:hidden">
+          Publish a notice
+        </summary>
+        <form action={createAnnouncement} className="mt-4 grid gap-4">
+          <Field htmlFor="announcement-title" label="Title">
+            <TextInput
               id="announcement-title"
               name="title"
               maxLength={120}
               required
-              className="h-12 bg-background"
               placeholder="Short leadership update"
             />
-          </div>
+          </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="announcement-message">Message</Label>
-            <Textarea
+          <Field htmlFor="announcement-message" label="Message">
+            <TextArea
               id="announcement-message"
               name="message"
               maxLength={3000}
               required
-              className="min-h-28 bg-background"
               placeholder="Plain-text instruction or update for leaders."
             />
-          </div>
+          </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="announcement-audience-type">
-                Leadership audience
-              </Label>
-              <select
+            <Field htmlFor="announcement-audience-type" label="Leadership audience">
+              <Select
                 id="announcement-audience-type"
                 name="audienceType"
                 defaultValue="all_leaders"
-                className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
               >
                 <option value="all_leaders">All leaders</option>
                 <option value="role">Specific role</option>
-              </select>
-            </div>
+              </Select>
+            </Field>
 
-            <div className="grid gap-2">
-              <Label htmlFor="announcement-audience-role">Audience role</Label>
-              <select
+            <Field
+              htmlFor="announcement-audience-role"
+              label="Audience role"
+              hint="Used when the audience is set to a specific role."
+            >
+              <Select
                 id="announcement-audience-role"
                 name="audienceRole"
                 defaultValue="company_leader"
-                className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
               >
                 {ANNOUNCEMENT_AUDIENCE_ROLES.map((role) => (
                   <option key={role} value={role}>
                     {formatRoleLabel(role)}
                   </option>
                 ))}
-              </select>
-              <p className="text-xs leading-5 text-muted-foreground">
-                Used when the audience is set to a specific role.
-              </p>
-            </div>
+              </Select>
+            </Field>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div className="grid gap-2">
-              <Label htmlFor="announcement-expires-at">Expiry date and time</Label>
-              <Input
+            <Field htmlFor="announcement-expires-at" label="Expiry date and time">
+              <TextInput
                 id="announcement-expires-at"
                 name="expiresAt"
                 type="datetime-local"
-                className="h-12 bg-background"
               />
-            </div>
+            </Field>
 
-            <label className="flex min-h-12 items-center gap-3 rounded-lg border border-border/80 bg-background px-3 text-sm font-medium text-foreground">
+            <label className="flex min-h-12 items-center gap-3 rounded-input bg-bg px-3.5 font-sans text-sm font-semibold text-ink shadow-[inset_0_0_0_1px_var(--rule-strong)]">
               <input
                 type="checkbox"
                 name="isUrgent"
-                className="size-4 rounded border-border accent-primary"
+                className="size-4 rounded accent-primary"
               />
               Mark urgent
             </label>
           </div>
 
-          <div className="border-t border-border/80 pt-1">
-            <Button
-              type="submit"
-              className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-            >
-              Publish announcement
-            </Button>
-          </div>
+          <V2Button type="submit" className="w-full sm:w-fit">
+            Publish announcement
+          </V2Button>
         </form>
-      </CardContent>
-    </Card>
+      </details>
+    </>
   );
 }
 
-function AnnouncementList({ overview }: { overview: AnnouncementOverview }) {
+function NoticeModule({ announcement }: { announcement: AnnouncementListItem }) {
+  const tone = announcement.isExpired
+    ? "quiet"
+    : announcement.isUrgent
+      ? "urgent"
+      : "care";
+
+  return (
+    <article
+      className={
+        announcement.isUrgent && !announcement.isExpired
+          ? "rounded-card bg-urgent-bg p-[18px] text-ink shadow-lift"
+          : "rounded-card bg-surface p-[18px] text-ink shadow-lift"
+      }
+    >
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[9.5px] font-bold uppercase leading-none tracking-[0.16em] text-ink-3">
+            {announcement.audienceLabel}
+          </p>
+          <h2 className="mt-2 break-words font-serif text-[18px] font-medium leading-[1.22] tracking-[-0.008em] text-ink text-pretty">
+            {announcement.title}
+          </h2>
+        </div>
+        <Pill tone={tone}>
+          {announcement.isExpired
+            ? "Archived"
+            : announcement.isUrgent
+              ? "Urgent"
+              : "General notice"}
+        </Pill>
+      </div>
+
+      <p className="mt-3 whitespace-pre-wrap break-words font-sans text-[13.5px] leading-[1.6] text-ink-2">
+        {announcement.message}
+      </p>
+
+      <dl className="mt-4 grid gap-3 rounded-card bg-bg-tint p-3 sm:grid-cols-3">
+        <div>
+          <dt className="font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-ink-3">
+            Published
+          </dt>
+          <dd className="mt-1 font-sans text-xs font-semibold leading-[1.4] text-ink-2">
+            {formatDateTime(announcement.createdAt)}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-ink-3">
+            From
+          </dt>
+          <dd className="mt-1 break-words font-sans text-xs font-semibold leading-[1.4] text-ink-2">
+            {announcement.createdByName ?? "Leadership admin"}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-ink-3">
+            Expires
+          </dt>
+          <dd className="mt-1 font-sans text-xs font-semibold leading-[1.4] text-ink-2">
+            {announcement.expiresAt
+              ? formatDateTime(announcement.expiresAt)
+              : "No expiry"}
+          </dd>
+        </div>
+      </dl>
+    </article>
+  );
+}
+
+function AnnouncementBoard({ overview }: { overview: AnnouncementOverview }) {
+  const urgentNotices = overview.announcements.filter(
+    (announcement) => announcement.isUrgent && !announcement.isExpired,
+  );
+  const activeNotices = overview.announcements.filter(
+    (announcement) => !announcement.isUrgent && !announcement.isExpired,
+  );
+  const archivedNotices = overview.announcements.filter(
+    (announcement) => announcement.isExpired,
+  );
+
   if (overview.announcements.length === 0) {
-    return <AnnouncementEmptyState />;
+    return (
+      <>
+        <V2Sect>Active notices</V2Sect>
+        <EmptyNotice
+          title="The notice board is clear."
+          message="Official leadership announcements will be posted here when there is something to carry."
+        />
+      </>
+    );
   }
 
   return (
-    <section className="grid gap-3">
-      {overview.announcements.map((announcement) => (
-        <AnnouncementCard
-          key={announcement.id}
-          announcement={announcement}
+    <>
+      <section className="mt-[18px] grid grid-cols-3 gap-3 rounded-card bg-surface p-[18px] shadow-lift">
+        <Counter value={overview.summary.active} label="Active" />
+        <Counter value={urgentNotices.length} label="Urgent" />
+        <Counter value={overview.summary.total} label="Total" />
+      </section>
+
+      {urgentNotices.length > 0 ? (
+        <>
+          <V2Sect action={`${urgentNotices.length}`}>Urgent notices</V2Sect>
+          <div className="grid gap-3">
+            {urgentNotices.map((announcement) => (
+              <NoticeModule key={announcement.id} announcement={announcement} />
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      <V2Sect action={`${activeNotices.length}`}>Active notices</V2Sect>
+      {activeNotices.length > 0 ? (
+        <div className="grid gap-3">
+          {activeNotices.map((announcement) => (
+            <NoticeModule key={announcement.id} announcement={announcement} />
+          ))}
+        </div>
+      ) : (
+        <EmptyNotice
+          title="No general notices are active."
+          message="Urgent or archived notices remain separated so the board stays easy to read."
         />
-      ))}
-    </section>
+      )}
+
+      {overview.summary.hasExpiry ? (
+        <>
+          <V2Sect action={`${archivedNotices.length}`}>Archive</V2Sect>
+          {archivedNotices.length > 0 ? (
+            <div className="grid gap-3">
+              {archivedNotices.map((announcement) => (
+                <NoticeModule key={announcement.id} announcement={announcement} />
+              ))}
+            </div>
+          ) : (
+            <EmptyNotice
+              title="No notices have expired."
+              message="Expired notices will settle here after their expiry date."
+            />
+          )}
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -198,109 +325,54 @@ export default async function AnnouncementsPage({
   const isAdmin =
     primaryRole === "church_admin" || primaryRole === "super_admin";
   const isLeader = Boolean(primaryRole);
-  const actionNotice = (
-    <>
-      {announcementCreated ? (
-        <Alert className="border-[#C8BDAF] bg-[#FBFAF8]">
-          <AlertDescription>Announcement published.</AlertDescription>
-        </Alert>
-      ) : null}
 
-      {createError ? (
-        <Alert variant="destructive">
-          <AlertDescription>
-            Announcement could not be published.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-    </>
-  );
-
-  let title = "Announcements";
-  let subtitle = "Leadership updates and notices.";
   let content = <RestrictedState />;
 
   if (!churchId) {
     content = (
-      <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">
-            No active church membership found
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Announcement visibility depends on an active church membership. Ask
-            an admin to confirm your access.
-          </p>
-        </CardContent>
-      </Card>
+      <>
+        <V2Sect>Notice access</V2Sect>
+        <EmptyNotice
+          title="No active church membership found."
+          message="Announcement visibility depends on an active church membership. Ask an admin to confirm your access."
+        />
+      </>
     );
   } else if (isAdmin) {
-    title = "Announcements";
-    subtitle = "Leadership announcements across the church.";
-
     const announcementsResult = await getAdminAnnouncements(churchId);
-    const overview = announcementsResult.data;
 
     content = (
       <>
-        {announcementsResult.error ? (
-          <QueryNotice message={announcementsResult.error} />
+        {announcementCreated ? (
+          <Alert className="mt-4 rounded-card border-0 bg-ok-bg text-ok">
+            <AlertDescription>Announcement published.</AlertDescription>
+          </Alert>
         ) : null}
-
+        {createError ? (
+          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+            <AlertDescription>Announcement could not be published.</AlertDescription>
+          </Alert>
+        ) : null}
+        {announcementsResult.error ? (
+          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+            <AlertDescription>{announcementsResult.error}</AlertDescription>
+          </Alert>
+        ) : null}
         <CreateAnnouncementForm />
-
-        <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-4">
-          <AnnouncementSummaryCard
-            label="Total"
-            value={overview.summary.total}
-          />
-          <AnnouncementSummaryCard
-            label="Active"
-            value={overview.summary.active}
-          />
-          <AnnouncementSummaryCard
-            label="Urgent"
-            value={overview.summary.urgent}
-          />
-          {overview.summary.hasExpiry ? (
-            <AnnouncementSummaryCard
-              label="Expired"
-              value={overview.summary.expired}
-            />
-          ) : null}
-        </section>
-
-        <AnnouncementList overview={overview} />
+        <AnnouncementBoard overview={announcementsResult.data} />
       </>
     );
   } else if (isLeader) {
     const announcementsResult = await getLeaderAnnouncements(user.id, churchId);
-    const overview = announcementsResult.data;
 
     content = (
       <>
         {announcementsResult.error ? (
-          <QueryNotice message={announcementsResult.error} />
+          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
+            <AlertDescription>{announcementsResult.error}</AlertDescription>
+          </Alert>
         ) : null}
-
-        <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-3">
-          <AnnouncementSummaryCard
-            label="Visible"
-            value={overview.summary.total}
-          />
-          <AnnouncementSummaryCard
-            label="Active"
-            value={overview.summary.active}
-          />
-          <AnnouncementSummaryCard
-            label="Urgent"
-            value={overview.summary.urgent}
-          />
-        </section>
-
-        <AnnouncementList overview={overview} />
+        <AnnouncementBoard overview={announcementsResult.data} />
       </>
     );
   }
@@ -311,9 +383,15 @@ export default async function AnnouncementsPage({
       role={primaryRole}
       churchName={church?.name}
     >
-      <PageHeader title={title} subtitle={subtitle} />
-
-      {actionNotice}
+      <V2Greeting
+        eyebrow="Official notices"
+        title={
+          <>
+            From the <em>desk.</em>
+          </>
+        }
+        subtitle="Leadership announcements are kept here as official notices, not a social feed."
+      />
 
       {content}
     </AppShell>

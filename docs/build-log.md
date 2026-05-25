@@ -425,3 +425,24 @@ The tasks experience was migrated to the approved SaltCity Leadership Briefing S
 - Fixed the empty task checklist title so zero-task states do not show a false task count.
 - Updated the checklist title count to include only actionable weekly tasks from the Today and This week groups, excluding done, later, and no-due-date tasks.
 - Made no database schema, SQL migration, RLS policy, Supabase query behavior, Server Action behavior, validation, permission, route, form field name, mutation, or business-logic changes.
+
+## Phase 13E — V2 Secondary Pages migration
+
+Announcements, Events, Companies, and More were migrated to the approved SaltCity Leadership Briefing System as a visual and usability pass:
+
+- Migrated `/announcements` to an official notice board style with V2 greeting, urgent notice prioritization, active notices, archive handling, published/audience/expiry metadata, long plain-text wrapping, intentional empty states, and a restyled admin create form.
+- Migrated `/events` to a service and leadership calendar style with V2 greeting, regular service schedule, upcoming event cards, DateTile treatment, event time/location details, status pills, and an empty state when no events are configured.
+- Migrated `/companies` to a member and leadership directory style with V2 greeting, company overview hero treatment, leadership rows, member rows, read-only company leader state, admin add-member form styling, and empty states for missing companies or members.
+- Migrated `/more` to an index style with available rows, quiet coming-soon rows, settings rows, a sign-out control, and a static SaltCity leadership footer.
+- Added lightweight V2 `IndexRow`, `MemberRow`, and `CompanyHero` components under `src/components/v2`.
+- Made no database schema, SQL migration, RLS policy, Supabase query behavior, Server Action behavior, validation, permission, route, form field name, mutation, or business-logic changes.
+
+### Phase 13E review fixes
+
+- Fixed `/events` display partitioning so ongoing, upcoming, and recently passed events are separated: in-progress events appear under Happening now, Upcoming and Next up only use events whose start time is still in the future, and Recently passed only uses events whose active-until time has elapsed.
+- Excluded closed event statuses from the `/events` Happening now bucket so completed and cancelled events keep their real status in history instead of receiving the In progress label.
+- Fixed `/events` grouping so future closed events are not labelled recently passed.
+- Updated `/events` grouping to separate happening now, upcoming, schedule changes, and recently passed events.
+- Fixed the `/announcements` urgent counter so it uses the same active urgent notices shown in the Urgent notices section, preventing expired urgent announcements from inflating the displayed count.
+- Fixed the company leader `/companies` member section action so the active member count matches the active count shown in the company hero while still displaying inactive members when present.
+- Made no database schema, SQL migration, RLS policy, Supabase query behavior, Server Action behavior, validation, permission, route, form field name, mutation, or business-logic changes.
