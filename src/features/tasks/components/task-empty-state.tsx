@@ -1,17 +1,20 @@
-import { EmptyStateCard } from "@/components/ui/empty-state-card";
-
 type TaskEmptyStateProps = {
   title?: string;
   message?: string;
 };
 
 export function TaskEmptyState({
-  title = "No tasks to show.",
-  message = "Leadership tasks that are visible to you will appear here when they are assigned.",
+  title = "Nothing pressing.",
+  message = "Rest is part of the work.",
 }: TaskEmptyStateProps) {
   return (
-    <EmptyStateCard title={title}>
-      <p>{message}</p>
-    </EmptyStateCard>
+    <section className="rounded-card bg-surface p-[18px] text-center shadow-lift">
+      <h2 className="font-serif text-[18px] font-medium leading-[1.22] tracking-[-0.008em] text-ink text-pretty">
+        {title}
+      </h2>
+      <p className="mt-2 font-serif text-[13.5px] italic leading-[1.45] text-ink-2 text-pretty">
+        {message}
+      </p>
+    </section>
   );
 }

@@ -1,4 +1,4 @@
-import { MetricCard } from "@/components/ui/metric-card";
+import { Counter } from "@/components/v2/primitives/counter";
 
 type TaskSummaryCardProps = {
   label: string;
@@ -6,5 +6,5 @@ type TaskSummaryCardProps = {
 };
 
 export function TaskSummaryCard({ label, value }: TaskSummaryCardProps) {
-  return <MetricCard label={label} value={value} />;
+  return <Counter label={label} value={value} />;
 }

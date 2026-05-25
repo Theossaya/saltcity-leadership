@@ -413,3 +413,15 @@ The follow-up experience was migrated to the approved SaltCity Leadership Briefi
 - Company leaders now see only `Assigned to you` and `Recently closed`; unassigned/new absentee records remain saved with reports but are not shown to leaders as active follow-up.
 - Reworded actions and labels toward office care language: `Assign follow-up`, `Record contact`, `New from report`, `Not assigned yet`, and `Closed`.
 - Kept forms collapsed by default and preserved the existing form field names, Server Actions, permissions, query helpers, reports workflow, SQL/RLS model, and follow-up status behavior.
+
+## Phase 13D — V2 Tasks migration
+
+The tasks experience was migrated to the approved SaltCity Leadership Briefing System as a visual and usability pass:
+
+- Migrated `/tasks` to a leadership checklist layout with V2 greeting, compact counters, simple time/state sections, and token-based status treatment.
+- Restyled task rows and assigned-user status controls so tasks read as lightweight checklist items instead of repeated heavy cards or a project-management board.
+- Restyled the existing admin create-task form with V2 fields and button treatment while keeping it collapsed and preserving existing field names.
+- Updated empty states for no assigned tasks, no church-wide tasks, and no done tasks with calm pastoral copy.
+- Fixed the empty task checklist title so zero-task states do not show a false task count.
+- Updated the checklist title count to include only actionable weekly tasks from the Today and This week groups, excluding done, later, and no-due-date tasks.
+- Made no database schema, SQL migration, RLS policy, Supabase query behavior, Server Action behavior, validation, permission, route, form field name, mutation, or business-logic changes.

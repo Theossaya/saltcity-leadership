@@ -2,23 +2,27 @@ import { redirect } from "next/navigation";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { PageHeader } from "@/components/ui/page-header";
 import { QueryNotice } from "@/components/ui/query-notice";
-import { Textarea } from "@/components/ui/textarea";
+import { V2Greeting } from "@/components/v2/chrome/v2-greeting";
+import { V2Sect } from "@/components/v2/chrome/v2-sect";
+import { Button } from "@/components/v2/primitives/button";
+import { Counter } from "@/components/v2/primitives/counter";
+import {
+  Field,
+  Select,
+  TextArea,
+  TextInput,
+} from "@/components/v2/primitives/field";
 import { getCurrentUser } from "@/features/auth/get-current-user";
 import { createTask } from "@/features/tasks/actions";
 import { TaskCard } from "@/features/tasks/components/task-card";
 import { TaskEmptyState } from "@/features/tasks/components/task-empty-state";
-import { TaskSummaryCard } from "@/features/tasks/components/task-summary-card";
 import {
   getAdminTasksOverview,
   getLeaderTasks,
   getTaskCreateOptions,
   type TaskCreateOptions,
+  type TaskListItem,
   type TaskOverview,
 } from "@/features/tasks/queries";
 import { TASK_PRIORITIES, TASK_PRIORITY_LABELS } from "@/lib/constants/statuses";
@@ -41,30 +45,126 @@ function formatRoleLabel(role: string) {
 
 function RestrictedState() {
   return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">Task access</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Task visibility is limited to church admins and active leaders with
-          assigned or visible tasks.
-        </p>
-      </CardContent>
-    </Card>
+    <>
+      <V2Sect>Task access</V2Sect>
+      <TaskEmptyState
+        title="Tasks are not visible here."
+        message="Task visibility is limited to church admins and active leaders with assigned or visible tasks."
+      />
+    </>
+  );
+}
+
+function todayInLagos() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function addDays(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+
+  return date.toISOString().slice(0, 10);
+}
+
+function groupTasks(tasks: TaskListItem[]) {
+  const today = todayInLagos();
+  const weekEnd = addDays(today, 6);
+  const todayTasks: TaskListItem[] = [];
+  const thisWeekTasks: TaskListItem[] = [];
+  const laterTasks: TaskListItem[] = [];
+  const doneTasks: TaskListItem[] = [];
+
+  for (const task of tasks) {
+    if (task.status === "done") {
+      doneTasks.push(task);
+    } else if (task.dueDate && task.dueDate <= today) {
+      todayTasks.push(task);
+    } else if (task.dueDate && task.dueDate <= weekEnd) {
+      thisWeekTasks.push(task);
+    } else {
+      laterTasks.push(task);
+    }
+  }
+
+  return [
+    { label: "Today", empty: "Nothing due today. Breathe and keep the rhythm.", tasks: todayTasks },
+    { label: "This week", empty: "No other tasks are dated for this week.", tasks: thisWeekTasks },
+    { label: "Later / no due date", empty: "Nothing is waiting in the later list.", tasks: laterTasks },
+    { label: "Done", empty: "Closed tasks will rest here.", tasks: doneTasks },
+  ];
+}
+
+function getChecklistTitleCount(tasks: TaskListItem[]) {
+  const [todayGroup, thisWeekGroup] = groupTasks(tasks);
+
+  return todayGroup.tasks.length + thisWeekGroup.tasks.length;
+}
+
+function TaskGroup({
+  label,
+  tasks,
+  empty,
+}: {
+  label: string;
+  tasks: TaskListItem[];
+  empty: string;
+}) {
+  return (
+    <>
+      <V2Sect action={`${tasks.length}`}>{label}</V2Sect>
+      {tasks.length > 0 ? (
+        <section className="rounded-card bg-surface p-[18px] shadow-lift">
+          {tasks.map((task) => (
+            <TaskCard key={task.id} task={task} />
+          ))}
+        </section>
+      ) : (
+        <TaskEmptyState title="Nothing here." message={empty} />
+      )}
+    </>
   );
 }
 
 function TaskList({ overview }: { overview: TaskOverview }) {
   if (overview.tasks.length === 0) {
-    return <TaskEmptyState />;
+    return (
+      <TaskEmptyState
+        title="Nothing pressing."
+        message="Rest is part of the work."
+      />
+    );
   }
 
   return (
-    <section className="grid gap-3">
-      {overview.tasks.map((task) => (
-        <TaskCard key={task.id} task={task} />
+    <>
+      {groupTasks(overview.tasks).map((group) => (
+        <TaskGroup
+          key={group.label}
+          label={group.label}
+          tasks={group.tasks}
+          empty={group.empty}
+        />
       ))}
+    </>
+  );
+}
+
+function TaskSummaryStrip({ overview }: { overview: TaskOverview }) {
+  const highPriority = overview.tasks.filter(
+    (task) => task.priority === "high" || task.priority === "urgent",
+  ).length;
+
+  return (
+    <section className="mt-[18px] grid grid-cols-2 gap-3 rounded-card bg-surface p-[18px] shadow-lift sm:grid-cols-4">
+      <Counter value={overview.summary.totalTasks} label="Total" />
+      <Counter value={highPriority} label="High priority" />
+      <Counter value={overview.summary.inProgress} label="In progress" />
+      <Counter value={overview.summary.done} label="Done" />
     </section>
   );
 }
@@ -77,43 +177,41 @@ function CreateTaskForm({
   options: TaskCreateOptions;
 }) {
   return (
-    <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">Create task</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form action={createTask} className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="task-title">Title</Label>
-            <Input
+    <>
+      <V2Sect>Church office</V2Sect>
+      <details className="rounded-card bg-surface p-[18px] shadow-lift">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-sans text-sm font-semibold text-ink marker:hidden [&::-webkit-details-marker]:hidden">
+          <span>Create task</span>
+          <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+            Admin
+          </span>
+        </summary>
+        <form action={createTask} className="mt-4 grid gap-4">
+          <Field htmlFor="task-title" label="Title">
+            <TextInput
               id="task-title"
               name="title"
               maxLength={160}
               required
-              className="h-12 bg-background"
               placeholder="What needs to be done?"
             />
-          </div>
+          </Field>
 
-          <div className="grid gap-2">
-            <Label htmlFor="task-description">Description</Label>
-            <Textarea
+          <Field htmlFor="task-description" label="Description">
+            <TextArea
               id="task-description"
               name="description"
               maxLength={2000}
-              className="min-h-24 bg-background"
               placeholder="Optional context for the assigned leader."
             />
-          </div>
+          </Field>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="grid gap-2">
-              <Label htmlFor="task-assigned-to">Assigned leader</Label>
-              <select
+            <Field htmlFor="task-assigned-to" label="Assigned leader">
+              <Select
                 id="task-assigned-to"
                 name="assignedTo"
                 defaultValue=""
-                className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
               >
                 <option value="">Unassigned</option>
                 {options.assignees.map((assignee) => (
@@ -121,46 +219,40 @@ function CreateTaskForm({
                     {assignee.name} - {formatRoleLabel(assignee.role)}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
 
-            <div className="grid gap-2">
-              <Label htmlFor="task-due-date">Due date</Label>
-              <Input
+            <Field htmlFor="task-due-date" label="Due date">
+              <TextInput
                 id="task-due-date"
                 name="dueDate"
                 type="date"
                 min={minimumDueDate}
-                className="h-12 bg-background"
               />
-            </div>
+            </Field>
 
-            <div className="grid gap-2">
-              <Label htmlFor="task-priority">Priority</Label>
-              <select
+            <Field htmlFor="task-priority" label="Priority">
+              <Select
                 id="task-priority"
                 name="priority"
                 defaultValue="normal"
-                className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
               >
                 {TASK_PRIORITIES.map((priority) => (
                   <option key={priority} value={priority}>
                     {TASK_PRIORITY_LABELS[priority]}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="task-linked-company">Linked company</Label>
+            <Field htmlFor="task-linked-company" label="Linked company">
               <input type="hidden" name="linkedEntityType" value="company" />
-              <select
+              <Select
                 id="task-linked-company"
                 name="linkedEntityId"
                 defaultValue=""
-                className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
               >
                 <option value="">No company link</option>
                 {options.companies.map((company) => (
@@ -168,16 +260,14 @@ function CreateTaskForm({
                     {company.name}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
 
-            <div className="grid gap-2">
-              <Label htmlFor="task-follow-up-case">Follow-up case</Label>
-              <select
+            <Field htmlFor="task-follow-up-case" label="Follow-up case">
+              <Select
                 id="task-follow-up-case"
                 name="followUpCaseId"
                 defaultValue=""
-                className="h-12 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
               >
                 <option value="">No follow-up link</option>
                 {options.followUpCases.map((followUpCase) => (
@@ -185,22 +275,55 @@ function CreateTaskForm({
                     {followUpCase.label} - {followUpCase.status}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
           </div>
 
-          <div className="border-t border-border/80 pt-1">
-            <Button
-              type="submit"
-              className="h-12 w-full bg-primary text-primary-foreground sm:w-fit sm:px-5"
-            >
+          <div className="pt-1">
+            <Button type="submit" className="w-full sm:w-fit">
               Create task
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </details>
+    </>
   );
+}
+
+function getChecklistTitle(totalTasks: number) {
+  if (totalTasks === 0) {
+    return <>Nothing pressing <em>this week.</em></>;
+  }
+
+  if (totalTasks === 1) {
+    return (
+      <>
+        One to close <em>this week.</em>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {totalTasks} to close <em>this week.</em>
+    </>
+  );
+}
+
+function getChecklistSubtitle(overview?: TaskOverview, admin = false) {
+  if (!overview) {
+    return "A simple, gentle pass through what has been entrusted to you.";
+  }
+
+  if (overview.summary.totalTasks === 0) {
+    return admin
+      ? "No church-wide tasks are pressing today."
+      : "Nothing pressing. Rest is part of the work.";
+  }
+
+  return admin
+    ? "A clear pass through the church-wide leadership checklist."
+    : "A simple, gentle pass through what you've taken on.";
 }
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
@@ -233,60 +356,51 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const actionNotice = (
     <>
       {taskCreated ? (
-        <Alert className="border-[#C8BDAF] bg-[#FBFAF8]">
+        <Alert className="mt-4 rounded-card border-0 bg-ok-bg text-ok">
           <AlertDescription>Task created.</AlertDescription>
         </Alert>
       ) : null}
 
       {taskStatusUpdated ? (
-        <Alert className="border-[#C8BDAF] bg-[#FBFAF8]">
+        <Alert className="mt-4 rounded-card border-0 bg-ok-bg text-ok">
           <AlertDescription>Task status updated.</AlertDescription>
         </Alert>
       ) : null}
 
       {createError ? (
-        <Alert variant="destructive">
+        <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
           <AlertDescription>Task could not be created.</AlertDescription>
         </Alert>
       ) : null}
 
       {statusUpdateError ? (
-        <Alert variant="destructive">
+        <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
           <AlertDescription>Task status could not be updated.</AlertDescription>
         </Alert>
       ) : null}
     </>
   );
 
-  let title = "Tasks";
-  let subtitle = "Tasks assigned to you.";
+  let title = getChecklistTitle(0);
+  let subtitle = getChecklistSubtitle();
   let content = <RestrictedState />;
 
   if (!churchId) {
+    subtitle = "Ask an admin to confirm your active church membership.";
     content = (
-      <Card className="rounded-lg border-border/80 bg-card shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold">
-            No active church membership found
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Task visibility depends on an active church membership. Ask an admin
-            to confirm your access.
-          </p>
-        </CardContent>
-      </Card>
+      <TaskEmptyState
+        title="No active church membership found."
+        message="Task visibility depends on an active church membership."
+      />
     );
   } else if (isAdmin) {
-    title = "Tasks";
-    subtitle = "Leadership task visibility across the church.";
-
     const [tasksResult, createOptionsResult] = await Promise.all([
       getAdminTasksOverview(churchId, user.id),
       getTaskCreateOptions(churchId),
     ]);
     const overview = tasksResult.data;
+    title = getChecklistTitle(getChecklistTitleCount(overview.tasks));
+    subtitle = getChecklistSubtitle(overview, true);
 
     content = (
       <>
@@ -300,42 +414,22 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
           options={createOptionsResult.data}
         />
 
-        <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-5">
-          <TaskSummaryCard label="Total tasks" value={overview.summary.totalTasks} />
-          <TaskSummaryCard label="Open" value={overview.summary.open} />
-          <TaskSummaryCard
-            label="In progress"
-            value={overview.summary.inProgress}
-          />
-          <TaskSummaryCard label="Done" value={overview.summary.done} />
-          {overview.summary.hasDueDates ? (
-            <TaskSummaryCard label="Overdue" value={overview.summary.overdue} />
-          ) : null}
-        </section>
+        <TaskSummaryStrip overview={overview} />
 
         <TaskList overview={overview} />
       </>
     );
   } else if (isLeader) {
-    title = "Tasks";
-    subtitle = "Tasks assigned to you.";
-
     const tasksResult = await getLeaderTasks(user.id, churchId);
     const overview = tasksResult.data;
+    title = getChecklistTitle(getChecklistTitleCount(overview.tasks));
+    subtitle = getChecklistSubtitle(overview);
 
     content = (
       <>
         {tasksResult.error ? <QueryNotice message={tasksResult.error} /> : null}
 
-        <section className="grid grid-cols-2 gap-3 rounded-lg border border-border/70 bg-[#EDE7DF]/55 p-3 sm:grid-cols-4">
-          <TaskSummaryCard label="Total tasks" value={overview.summary.totalTasks} />
-          <TaskSummaryCard label="Open" value={overview.summary.open} />
-          <TaskSummaryCard
-            label="In progress"
-            value={overview.summary.inProgress}
-          />
-          <TaskSummaryCard label="Done" value={overview.summary.done} />
-        </section>
+        <TaskSummaryStrip overview={overview} />
 
         <TaskList overview={overview} />
       </>
@@ -348,7 +442,11 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
       role={primaryRole}
       churchName={church?.name}
     >
-      <PageHeader title={title} subtitle={subtitle} />
+      <V2Greeting
+        eyebrow="Leadership Checklist"
+        title={title}
+        subtitle={subtitle}
+      />
 
       {actionNotice}
 
