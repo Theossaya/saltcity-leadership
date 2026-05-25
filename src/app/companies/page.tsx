@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppShell } from "@/components/layout/app-shell";
+import { QueryNotice } from "@/components/ui/query-notice";
 import { V2Greeting } from "@/components/v2/chrome/v2-greeting";
 import { V2Sect } from "@/components/v2/chrome/v2-sect";
 import { CompanyHero } from "@/components/v2/modules/company-hero";
@@ -153,8 +153,8 @@ function MemberRows({ members }: { members: CompanyMember[] }) {
   if (members.length === 0) {
     return (
       <EmptyDirectory
-        title="No members found."
-        message="Company members will appear here when they are added by an admin."
+        title="The member list is empty."
+        message="Company members will appear here after an admin adds them."
       />
     );
   }
@@ -245,7 +245,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
       <>
         <V2Sect>Directory access</V2Sect>
         <EmptyDirectory
-          title="No active church membership found."
+          title="Active church membership needed."
           message="Company visibility depends on an active church membership. Ask an admin to confirm your access."
         />
       </>
@@ -259,24 +259,16 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     content = (
       <>
         {memberCreated ? (
-          <Alert className="mt-4 rounded-card border-0 bg-ok-bg text-ok">
-            <AlertDescription>Company member added.</AlertDescription>
-          </Alert>
+          <QueryNotice tone="ok" message="Company member added to the directory." />
         ) : null}
         {createMemberError ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>Company member could not be added.</AlertDescription>
-          </Alert>
+          <QueryNotice message="Company member could not be added. Check the name and company, then try again." />
         ) : null}
         {companiesResult.error ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>{companiesResult.error}</AlertDescription>
-          </Alert>
+          <QueryNotice message="We could not load the company directory. Try again shortly." />
         ) : null}
         {createOptionsResult.error ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>{createOptionsResult.error}</AlertDescription>
-          </Alert>
+          <QueryNotice message="The member form could not load active companies. Existing directory details remain visible." />
         ) : null}
 
         <CreateCompanyMemberForm companies={createOptionsResult.data} />
@@ -290,8 +282,8 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
           </div>
         ) : (
           <EmptyDirectory
-            title="No companies found."
-            message="Company structure will appear here after companies are added for this church."
+            title="The company directory is empty."
+            message="Companies will appear here after they are added for this church."
           />
         )}
       </>
@@ -306,20 +298,14 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
     );
 
     content = companyResult.error && !companyResult.data ? (
-      <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-        <AlertDescription>{companyResult.error}</AlertDescription>
-      </Alert>
+      <QueryNotice message="We could not load your assigned company. Try again shortly." />
     ) : companyResult.data ? (
       <>
         {companyResult.error ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>{companyResult.error}</AlertDescription>
-          </Alert>
+          <QueryNotice message="Some company details could not be refreshed. The available directory is shown below." />
         ) : null}
         {membersResult.error ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>{membersResult.error}</AlertDescription>
-          </Alert>
+          <QueryNotice message="We could not load the latest member list. Try again shortly." />
         ) : null}
 
         <section className="mt-[18px]">
@@ -342,7 +328,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
       <>
         <V2Sect>Directory access</V2Sect>
         <EmptyDirectory
-          title="No assigned company found."
+          title="Your company assignment is not active yet."
           message="Your company view will appear when an admin assigns you as a company leader or assistant leader."
         />
       </>

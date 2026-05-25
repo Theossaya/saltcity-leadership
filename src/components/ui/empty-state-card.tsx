@@ -12,17 +12,12 @@ export function EmptyStateCard({
   centered = false,
 }: EmptyStateCardProps) {
   return (
-    <div className="rounded-lg border border-dashed border-primary/20 bg-[#FBFAF8] px-4 py-5 shadow-[0_8px_22px_rgba(21,18,23,0.04)]">
+    <div className="rounded-card bg-surface p-[18px] shadow-lift">
       <div className={centered ? "mx-auto max-w-sm text-center" : undefined}>
-        <div
-          className={
-            centered
-              ? "mx-auto mb-3 h-1 w-10 rounded-full bg-primary/25"
-              : "mb-3 h-1 w-10 rounded-full bg-primary/25"
-          }
-        />
-        <h2 className="text-base font-semibold text-foreground">{title}</h2>
-        <div className="mt-2 text-sm leading-6 text-muted-foreground">
+        <h2 className="font-serif text-[18px] font-medium leading-[1.22] tracking-[-0.008em] text-ink text-pretty">
+          {title}
+        </h2>
+        <div className="mt-2 font-serif text-[13.5px] italic leading-[1.45] text-ink-2 text-pretty">
           {children}
         </div>
       </div>

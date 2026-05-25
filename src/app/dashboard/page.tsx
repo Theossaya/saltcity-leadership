@@ -151,7 +151,8 @@ function DashboardNotice({ messages }: { messages: string[] }) {
 
   return (
     <section className="mt-4 rounded-card bg-quiet-bg px-4 py-3 font-sans text-xs leading-5 text-quiet">
-      {messages[0]}
+      Some briefing details could not be refreshed. The available items are
+      shown below.
     </section>
   );
 }

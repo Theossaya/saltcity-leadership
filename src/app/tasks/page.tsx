@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppShell } from "@/components/layout/app-shell";
 import { QueryNotice } from "@/components/ui/query-notice";
 import { V2Greeting } from "@/components/v2/chrome/v2-greeting";
@@ -92,10 +91,30 @@ function groupTasks(tasks: TaskListItem[]) {
   }
 
   return [
-    { label: "Today", empty: "Nothing due today. Breathe and keep the rhythm.", tasks: todayTasks },
-    { label: "This week", empty: "No other tasks are dated for this week.", tasks: thisWeekTasks },
-    { label: "Later / no due date", empty: "Nothing is waiting in the later list.", tasks: laterTasks },
-    { label: "Done", empty: "Closed tasks will rest here.", tasks: doneTasks },
+    {
+      label: "Today",
+      emptyTitle: "Today is clear.",
+      empty: "Nothing is due today. Keep the rhythm.",
+      tasks: todayTasks,
+    },
+    {
+      label: "This week",
+      emptyTitle: "This week is clear.",
+      empty: "No other tasks are dated for this week.",
+      tasks: thisWeekTasks,
+    },
+    {
+      label: "Later / no due date",
+      emptyTitle: "The later list is clear.",
+      empty: "Undated or later tasks will appear here.",
+      tasks: laterTasks,
+    },
+    {
+      label: "Done",
+      emptyTitle: "Closed tasks will rest here.",
+      empty: "Completed tasks appear here after they are marked done.",
+      tasks: doneTasks,
+    },
   ];
 }
 
@@ -108,10 +127,12 @@ function getChecklistTitleCount(tasks: TaskListItem[]) {
 function TaskGroup({
   label,
   tasks,
+  emptyTitle,
   empty,
 }: {
   label: string;
   tasks: TaskListItem[];
+  emptyTitle: string;
   empty: string;
 }) {
   return (
@@ -124,7 +145,7 @@ function TaskGroup({
           ))}
         </section>
       ) : (
-        <TaskEmptyState title="Nothing here." message={empty} />
+        <TaskEmptyState title={emptyTitle} message={empty} />
       )}
     </>
   );
@@ -147,6 +168,7 @@ function TaskList({ overview }: { overview: TaskOverview }) {
           key={group.label}
           label={group.label}
           tasks={group.tasks}
+          emptyTitle={group.emptyTitle}
           empty={group.empty}
         />
       ))}
@@ -341,6 +363,8 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const statusUpdateError =
     (Array.isArray(errorParam) ? errorParam[0] : errorParam) ===
     "unable-to-update-task";
+  const hasActionNotice =
+    taskCreated || taskStatusUpdated || createError || statusUpdateError;
   const { user, profile, primaryRole, churchId, church } =
     await getCurrentUser();
 
@@ -354,31 +378,23 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
   const isLeader = Boolean(primaryRole);
   const minimumDueDate = getTaskCreateMinimumDueDate();
   const actionNotice = (
-    <>
+    <div className="mt-4 grid gap-3">
       {taskCreated ? (
-        <Alert className="mt-4 rounded-card border-0 bg-ok-bg text-ok">
-          <AlertDescription>Task created.</AlertDescription>
-        </Alert>
+        <QueryNotice tone="ok" message="Task created and added to the checklist." />
       ) : null}
 
       {taskStatusUpdated ? (
-        <Alert className="mt-4 rounded-card border-0 bg-ok-bg text-ok">
-          <AlertDescription>Task status updated.</AlertDescription>
-        </Alert>
+        <QueryNotice tone="ok" message="Task status saved." />
       ) : null}
 
       {createError ? (
-        <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-          <AlertDescription>Task could not be created.</AlertDescription>
-        </Alert>
+        <QueryNotice message="Task could not be created. Check the title, due date, and assignment, then try again." />
       ) : null}
 
       {statusUpdateError ? (
-        <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-          <AlertDescription>Task status could not be updated.</AlertDescription>
-        </Alert>
+        <QueryNotice message="Task status could not be saved. Try again." />
       ) : null}
-    </>
+    </div>
   );
 
   let title = getChecklistTitle(0);
@@ -389,7 +405,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
     subtitle = "Ask an admin to confirm your active church membership.";
     content = (
       <TaskEmptyState
-        title="No active church membership found."
+        title="Active church membership needed."
         message="Task visibility depends on an active church membership."
       />
     );
@@ -404,9 +420,11 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
 
     content = (
       <>
-        {tasksResult.error ? <QueryNotice message={tasksResult.error} /> : null}
+        {tasksResult.error ? (
+          <QueryNotice message="We could not load the church task list. Try again shortly." />
+        ) : null}
         {createOptionsResult.error ? (
-          <QueryNotice message={createOptionsResult.error} />
+          <QueryNotice message="Task assignment options could not be loaded. You can still review existing tasks." />
         ) : null}
 
         <CreateTaskForm
@@ -427,7 +445,9 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
 
     content = (
       <>
-        {tasksResult.error ? <QueryNotice message={tasksResult.error} /> : null}
+        {tasksResult.error ? (
+          <QueryNotice message="We could not load your assigned tasks. Try again shortly." />
+        ) : null}
 
         <TaskSummaryStrip overview={overview} />
 
@@ -448,7 +468,7 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         subtitle={subtitle}
       />
 
-      {actionNotice}
+      {hasActionNotice ? actionNotice : null}
 
       {content}
     </AppShell>

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppShell } from "@/components/layout/app-shell";
+import { QueryNotice } from "@/components/ui/query-notice";
 import { V2Greeting } from "@/components/v2/chrome/v2-greeting";
 import { V2Sect } from "@/components/v2/chrome/v2-sect";
 import { Counter } from "@/components/v2/primitives/counter";
@@ -316,7 +316,7 @@ export default async function EventsPage() {
       <>
         <V2Sect>Calendar access</V2Sect>
         <EmptyCalendar
-          title="No active church membership found."
+          title="Active church membership needed."
           message="Event visibility depends on an active church membership. Ask an admin to confirm your access."
         />
       </>
@@ -327,9 +327,7 @@ export default async function EventsPage() {
     content = (
       <>
         {eventsResult.error ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>{eventsResult.error}</AlertDescription>
-          </Alert>
+          <QueryNotice message="We could not load the church calendar. Try again shortly." />
         ) : null}
         <EventsOverview overview={eventsResult.data} />
       </>
@@ -340,9 +338,7 @@ export default async function EventsPage() {
     content = (
       <>
         {eventsResult.error ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>{eventsResult.error}</AlertDescription>
-          </Alert>
+          <QueryNotice message="We could not load leadership events. Try again shortly." />
         ) : null}
         <EventsOverview overview={eventsResult.data} />
       </>

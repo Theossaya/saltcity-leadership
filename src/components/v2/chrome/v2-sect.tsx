@@ -9,8 +9,8 @@ type V2SectProps = {
 
 export function V2Sect({ children, action, href }: V2SectProps) {
   return (
-    <div className="flex items-baseline justify-between gap-3 pt-[22px] pb-2.5">
-      <h2 className="font-mono text-[11px] font-bold uppercase leading-none tracking-[0.16em] text-ink-3">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 pt-[22px] pb-2.5">
+      <h2 className="min-w-0 font-mono text-[11px] font-bold uppercase leading-[1.15] tracking-[0.16em] text-ink-3">
         {children}
       </h2>
       {action && href ? (

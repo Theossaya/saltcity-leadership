@@ -841,7 +841,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     content = (
       <>
         <ReportWeekCard week={getCurrentReportWeek()} />
-        <ReportEmptyState title="No active church membership found">
+        <ReportEmptyState title="Active church membership needed">
           <p>
             Report visibility depends on an active church membership. Ask an
             admin to confirm your access.
@@ -882,16 +882,16 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     content = (
       <>
         {overviewResult.error ? (
-          <ReportNotice message={overviewResult.error} />
+          <ReportNotice message="We could not load the reports overview. Try again shortly." />
         ) : null}
         {reviewError ? (
-          <ReportNotice message="Report could not be reviewed." />
+          <ReportNotice message="Report review could not be saved. Check the review outcome and try again." />
         ) : null}
         {reportReviewed ? (
           <ReportNotice tone="ok" message="Report review saved." />
         ) : null}
         {reportFlagged ? (
-          <ReportNotice tone="ok" message="Report flagged for follow-up." />
+          <ReportNotice tone="ok" message="Report flagged for follow-up review." />
         ) : null}
 
         <ReportProgressModule overviewRows={overview.rows} />
@@ -1015,7 +1015,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           />
         ) : null}
         {workspaceResult.error ? (
-          <ReportNotice message={workspaceResult.error} />
+          <ReportNotice message="We could not load the latest report workspace. Try again shortly." />
         ) : null}
 
         {workspace.company ? (
@@ -1081,7 +1081,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             )}
           </>
         ) : (
-          <ReportEmptyState title="No assigned company found">
+          <ReportEmptyState title="Your company assignment is not active yet">
             <p>
               Your report workspace will appear when an admin assigns you as a
               company leader or assistant leader.

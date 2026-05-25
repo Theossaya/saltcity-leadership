@@ -18,11 +18,13 @@ export function MemberRow({
     <div className="flex gap-3.5 py-3.5 first:pt-0 last:pb-0 [&+&]:shadow-[inset_0_1px_0_var(--rule)]">
       <Avatar name={name} ring={status === "active" ? "ok" : undefined} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-2">
-          <p className="min-w-0 truncate font-sans text-[14.5px] font-semibold leading-tight tracking-[-0.005em] text-ink">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="min-w-0 flex-1 basis-40 truncate font-sans text-[14.5px] font-semibold leading-tight tracking-[-0.005em] text-ink">
             {name}
           </p>
-          <Pill tone={status === "active" ? "ok" : "quiet"}>{status}</Pill>
+          <Pill tone={status === "active" ? "ok" : "quiet"} className="shrink-0">
+            {status}
+          </Pill>
         </div>
         <p className="mt-1 break-words font-sans text-xs leading-[1.4] text-ink-3">
           {meta}

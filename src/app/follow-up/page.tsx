@@ -28,11 +28,11 @@ type FollowUpPageProps = {
 };
 
 const createErrorMessages: Record<string, string> = {
-  "duplicate-case": "Active follow-up already exists for this absence.",
-  "invalid-absentee": "That absentee record could not be found for this church.",
+  "duplicate-case": "This absence already has an active follow-up case.",
+  "invalid-absentee": "This absence is no longer available for follow-up.",
   "invalid-assignee": "That assigned leader is not active in this church.",
   "permission-denied": "You do not have permission to assign this follow-up.",
-  "unable-to-create-case": "Follow-up could not be assigned.",
+  "unable-to-create-case": "Follow-up could not be assigned. Check the leader and try again.",
 };
 
 function EmptyModule({ children }: { children: string }) {
@@ -328,12 +328,14 @@ export default async function FollowUpPage({ searchParams }: FollowUpPageProps) 
     subtitle = getAdminSubtitle(queue, resolvedQueue);
     content = (
       <>
-        {queueResult.error ? <QueryNotice message={queueResult.error} /> : null}
+        {queueResult.error ? (
+          <QueryNotice message="We could not load new follow-up items. Try again shortly." />
+        ) : null}
         {resolvedQueueResult.error ? (
-          <QueryNotice message={resolvedQueueResult.error} />
+          <QueryNotice message="Recently closed follow-up could not be loaded." />
         ) : null}
         {createOptionsResult.error ? (
-          <QueryNotice message={createOptionsResult.error} />
+          <QueryNotice message="Follow-up assignment options could not be loaded. Existing items remain visible." />
         ) : null}
         <AdminCareLayout
           queue={queue}
@@ -354,10 +356,10 @@ export default async function FollowUpPage({ searchParams }: FollowUpPageProps) 
     content = (
       <>
         {assignedQueueResult.error ? (
-          <QueryNotice message={assignedQueueResult.error} />
+          <QueryNotice message="We could not load your assigned follow-up. Try again shortly." />
         ) : null}
         {assignedResolvedQueueResult.error ? (
-          <QueryNotice message={assignedResolvedQueueResult.error} />
+          <QueryNotice message="Recently closed follow-up could not be loaded." />
         ) : null}
         <LeaderCareLayout
           queue={queue}
@@ -376,9 +378,11 @@ export default async function FollowUpPage({ searchParams }: FollowUpPageProps) 
     subtitle = getLeaderSubtitle(queue, resolvedQueue);
     content = (
       <>
-        {queueResult.error ? <QueryNotice message={queueResult.error} /> : null}
+        {queueResult.error ? (
+          <QueryNotice message="We could not load your assigned follow-up. Try again shortly." />
+        ) : null}
         {resolvedQueueResult.error ? (
-          <QueryNotice message={resolvedQueueResult.error} />
+          <QueryNotice message="Recently closed follow-up could not be loaded." />
         ) : null}
         <LeaderCareLayout
           queue={queue}
@@ -396,8 +400,10 @@ export default async function FollowUpPage({ searchParams }: FollowUpPageProps) 
     >
       <V2Greeting eyebrow="Pastoral care" title={title} subtitle={subtitle} />
 
-      {caseCreated ? <CareNotice message="Follow-up assigned." /> : null}
-      {caseUpdated ? <CareNotice message="Contact record saved." /> : null}
+      {caseCreated ? <CareNotice message="Follow-up case assigned." /> : null}
+      {caseUpdated ? (
+        <CareNotice message="Follow-up record saved. Closed cases move to Recently closed." />
+      ) : null}
       {createErrorMessage ? (
         <CareNotice tone="urgent" message={createErrorMessage} />
       ) : null}

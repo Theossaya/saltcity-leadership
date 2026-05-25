@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AppShell } from "@/components/layout/app-shell";
+import { QueryNotice } from "@/components/ui/query-notice";
 import { V2Greeting } from "@/components/v2/chrome/v2-greeting";
 import { V2Sect } from "@/components/v2/chrome/v2-sect";
 import { Button as V2Button } from "@/components/v2/primitives/button";
@@ -333,7 +333,7 @@ export default async function AnnouncementsPage({
       <>
         <V2Sect>Notice access</V2Sect>
         <EmptyNotice
-          title="No active church membership found."
+          title="Active church membership needed."
           message="Announcement visibility depends on an active church membership. Ask an admin to confirm your access."
         />
       </>
@@ -344,19 +344,13 @@ export default async function AnnouncementsPage({
     content = (
       <>
         {announcementCreated ? (
-          <Alert className="mt-4 rounded-card border-0 bg-ok-bg text-ok">
-            <AlertDescription>Announcement published.</AlertDescription>
-          </Alert>
+          <QueryNotice tone="ok" message="Announcement published to the notice board." />
         ) : null}
         {createError ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>Announcement could not be published.</AlertDescription>
-          </Alert>
+          <QueryNotice message="Announcement could not be published. Check the title, message, and audience, then try again." />
         ) : null}
         {announcementsResult.error ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>{announcementsResult.error}</AlertDescription>
-          </Alert>
+          <QueryNotice message="We could not load the announcement board. Try again shortly." />
         ) : null}
         <CreateAnnouncementForm />
         <AnnouncementBoard overview={announcementsResult.data} />
@@ -368,9 +362,7 @@ export default async function AnnouncementsPage({
     content = (
       <>
         {announcementsResult.error ? (
-          <Alert className="mt-4 rounded-card border-0 bg-urgent-bg text-urgent">
-            <AlertDescription>{announcementsResult.error}</AlertDescription>
-          </Alert>
+          <QueryNotice message="We could not load leadership announcements. Try again shortly." />
         ) : null}
         <AnnouncementBoard overview={announcementsResult.data} />
       </>

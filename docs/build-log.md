@@ -469,3 +469,13 @@ The V2 migration was audited for role-based access, visibility, and permission m
 - Tightened follow-up case RLS so company leaders no longer have API-level visibility into every follow-up case for their assigned company; non-admin leaders now rely on assigned follow-up visibility.
 - Lightly hardened report review query notices so flagged reports get a distinct confirmation from reviewed reports.
 - Left visual design, routes, product scope, and business workflow unchanged.
+
+## Phase 14B — Error, empty-state, and mobile polish
+
+The existing V2 pages were hardened for empty, notice, error, and narrow mobile states without adding new product behavior:
+
+- Reviewed query-param notices across reports, follow-up, tasks, announcements, companies, and the applicable event/dashboard surfaces.
+- Polished empty states for dashboards, reports, absentee lists, follow-up queues, tasks, announcements, events, companies, and admin review sections with short V2-styled copy.
+- Improved mobile spacing and bottom-nav clearance in the app shell, plus wrapping behavior for section headers and long person/member rows.
+- Added a small V2 route error fallback with non-technical recovery copy.
+- Made no database schema, SQL migration, RLS policy, Server Action behavior, validation, permission, route, query workflow, form field name, mutation, or business-logic changes.
