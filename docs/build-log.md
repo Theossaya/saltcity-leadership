@@ -446,3 +446,17 @@ Announcements, Events, Companies, and More were migrated to the approved SaltCit
 - Fixed the `/announcements` urgent counter so it uses the same active urgent notices shown in the Urgent notices section, preventing expired urgent announcements from inflating the displayed count.
 - Fixed the company leader `/companies` member section action so the active member count matches the active count shown in the company hero while still displaying inactive members when present.
 - Made no database schema, SQL migration, RLS policy, Supabase query behavior, Server Action behavior, validation, permission, route, form field name, mutation, or business-logic changes.
+
+## Phase 13F — Dashboard data connection and briefing polish
+
+The dashboard was connected to live role-aware briefing data while preserving the approved V2 leadership briefing direction:
+
+- Added a dashboard briefing query helper that composes existing RLS-respecting report, care, task, announcement, and event query helpers without using service-role access.
+- Updated `/dashboard` so church admins and super admins see current-week report progress, reviewed/submitted/flagged/draft/missing counts, needs-attention previews, church-wide care, due admin tasks, active notices, and the next current/upcoming event.
+- Updated company leader and assistant leader dashboards so they see their current report status and attendance facts, assigned-only care previews, due-this-week tasks, active notices, and current/upcoming event previews.
+- Updated assigned/general leader dashboard states to use assigned care, due tasks, active notices, and calendar previews visible to their role.
+- Reduced the generic navigation-card feel by replacing placeholder cards with live counters, care rows, checklist rows, notice previews, and event/date treatment.
+- Fixed dashboard task briefing so "this week" counts are bounded to the current Lagos week and older overdue tasks are not counted as current-week work.
+- Updated dashboard task briefing to separate overdue tasks from current-week tasks and surface overdue work clearly before today's and this week's task previews.
+- Fixed dashboard event briefing so events without an end time stay active for the default event duration after start instead of disappearing immediately.
+- Made no database schema, SQL migration, RLS policy, Server Action, validation, permission, route, form field name, mutation, report submission, follow-up update, task update, announcement/event page, or business-logic changes.
