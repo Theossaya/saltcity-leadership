@@ -46,6 +46,7 @@ type ReportsPageProps = {
   searchParams?: Promise<{
     error?: string | string[];
     reviewed?: string | string[];
+    flagged?: string | string[];
     submitted?: string | string[];
     updated?: string | string[];
   }>;
@@ -774,6 +775,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const resolvedSearchParams = await searchParams;
   const errorParam = resolvedSearchParams?.error;
   const reviewedParam = resolvedSearchParams?.reviewed;
+  const flaggedParam = resolvedSearchParams?.flagged;
   const submittedParam = resolvedSearchParams?.submitted;
   const updatedParam = resolvedSearchParams?.updated;
   const errorValue = Array.isArray(errorParam) ? errorParam[0] : errorParam;
@@ -788,6 +790,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const reviewError = errorValue === "unable-to-review-report";
   const reportReviewed =
     (Array.isArray(reviewedParam) ? reviewedParam[0] : reviewedParam) ===
+    "report";
+  const reportFlagged =
+    (Array.isArray(flaggedParam) ? flaggedParam[0] : flaggedParam) ===
     "report";
   const reportSubmitted =
     (Array.isArray(submittedParam) ? submittedParam[0] : submittedParam) ===
@@ -884,6 +889,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         ) : null}
         {reportReviewed ? (
           <ReportNotice tone="ok" message="Report review saved." />
+        ) : null}
+        {reportFlagged ? (
+          <ReportNotice tone="ok" message="Report flagged for follow-up." />
         ) : null}
 
         <ReportProgressModule overviewRows={overview.rows} />

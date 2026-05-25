@@ -460,3 +460,12 @@ The dashboard was connected to live role-aware briefing data while preserving th
 - Updated dashboard task briefing to separate overdue tasks from current-week tasks and surface overdue work clearly before today's and this week's task previews.
 - Fixed dashboard event briefing so events without an end time stay active for the default event duration after start instead of disappearing immediately.
 - Made no database schema, SQL migration, RLS policy, Server Action, validation, permission, route, form field name, mutation, report submission, follow-up update, task update, announcement/event page, or business-logic changes.
+
+## Phase 14A — Role-based QA and permission sanity pass
+
+The V2 migration was audited for role-based access, visibility, and permission mismatches without broad feature changes:
+
+- Checked admin, company leader, and assigned/general leader page branching across dashboard, reports, follow-up, tasks, announcements, events, companies, and more.
+- Tightened follow-up case RLS so company leaders no longer have API-level visibility into every follow-up case for their assigned company; non-admin leaders now rely on assigned follow-up visibility.
+- Lightly hardened report review query notices so flagged reports get a distinct confirmation from reviewed reports.
+- Left visual design, routes, product scope, and business workflow unchanged.

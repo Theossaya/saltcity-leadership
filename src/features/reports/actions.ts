@@ -540,7 +540,11 @@ export async function reviewWeeklyReport(formData: FormData) {
 
   revalidatePath("/reports");
   revalidatePath("/dashboard");
-  redirect("/reports?reviewed=report");
+  redirect(
+    values.reviewStatus === "flagged"
+      ? "/reports?flagged=report"
+      : "/reports?reviewed=report",
+  );
 }
 
 export async function addAbsenteeRecord(formData: FormData) {
