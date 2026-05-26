@@ -479,3 +479,13 @@ The existing V2 pages were hardened for empty, notice, error, and narrow mobile 
 - Improved mobile spacing and bottom-nav clearance in the app shell, plus wrapping behavior for section headers and long person/member rows.
 - Added a small V2 route error fallback with non-technical recovery copy.
 - Made no database schema, SQL migration, RLS policy, Server Action behavior, validation, permission, route, query workflow, form field name, mutation, or business-logic changes.
+
+## Phase 14C — Demo data, seed sanity, and launch readiness checklist
+
+The project was audited for demo/test readiness before launch without broad feature changes:
+
+- Added `docs/launch-checklist.md` with the ordered SQL migration checklist, Supabase run notes, and dependency/order notes.
+- Reviewed demo seed data in `supabase/sql/010_demo_data.sql` for rolling dates, optional test-account links, report/company consistency, duplicate active follow-up cases, current events, active announcements, and actionable tasks.
+- Added manual launch smoke test coverage for admin, company leader, and assigned/general leader flows.
+- Documented PWA/deployment basics, required environment variables, test account expectations, and known MVP limitations.
+- Made no database schema, SQL migration, RLS policy, Server Action, route, permission model, product scope, or visual design changes.
