@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
@@ -17,7 +18,7 @@ export async function login(
 
   if (!email || !password) {
     return {
-      error: "Enter your email and password.",
+      error: "Enter your email and password to continue.",
     };
   }
 
@@ -29,9 +30,11 @@ export async function login(
 
   if (error) {
     return {
-      error: "We could not sign you in with those details.",
+      error:
+        "We could not sign you in with those details. Check the email and password, then try again. If this account was just created, wait a moment and try again.",
     };
   }
 
+  revalidatePath("/", "layout");
   redirect("/dashboard");
 }

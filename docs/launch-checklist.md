@@ -75,6 +75,15 @@ Recommended test accounts:
 
 ## Manual smoke test checklist
 
+Auth and session:
+
+- Log in as `admin@example.com`; confirm `/dashboard` loads the admin briefing and admin-visible pages stay scoped by role.
+- Log out from the app chrome or `/more`; confirm the browser lands on `/login` and protected app pages no longer render as signed in.
+- Log in as `leader@example.com` in the same browser session after admin logout; confirm the dashboard, navigation context, reports, follow-up, tasks, and companies views show leader-scoped content rather than stale admin UI.
+- While signed out, open `/dashboard`, `/reports`, `/follow-up`, `/tasks`, `/announcements`, `/events`, `/companies`, and `/more`; confirm each redirects to `/login`.
+- Try a valid email with a wrong password; confirm the login page shows calm copy that asks the leader to check the email and password and try again.
+- If a test account exists without an active `church_memberships` row, log in and confirm `/dashboard` explains that the account is signed in but no active leadership profile is connected yet.
+
 Admin:
 
 - Log in as `admin@example.com`.

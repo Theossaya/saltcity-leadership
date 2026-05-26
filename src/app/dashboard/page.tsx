@@ -471,6 +471,45 @@ export default async function DashboardPage() {
     primaryRole === "church_admin" || primaryRole === "super_admin";
   const isCompanyLeader =
     primaryRole === "company_leader" || primaryRole === "assistant_leader";
+
+  if (!churchId || !primaryRole) {
+    return (
+      <AppShell
+        displayName={displayName}
+        role={primaryRole}
+        churchName={church?.name}
+      >
+        <V2Greeting
+          eyebrow={formatDashboardDate(now)}
+          title={
+            <>
+              Welcome, <em>{firstName}.</em>
+            </>
+          }
+          subtitle="Your SaltCity Leadership account is signed in."
+        />
+
+        <Notice
+          title="No active leadership profile is connected yet."
+          body="Your account is signed in, but no active leadership profile is connected yet. Please contact the church office."
+          tone="quiet"
+          tag="Account"
+        />
+
+        <section className="mt-4 rounded-card bg-surface p-[18px] shadow-lift">
+          <h2 className="font-serif text-[18px] font-medium leading-[1.22] tracking-[-0.008em] text-ink text-pretty">
+            Briefing access will appear here.
+          </h2>
+          <p className="mt-2 font-sans text-[13px] leading-5 text-ink-2 text-pretty">
+            Once the office connects an active leadership profile to this email
+            address, reports, care, tasks, notices, and events will be shown for
+            your role.
+          </p>
+        </section>
+      </AppShell>
+    );
+  }
+
   const briefing = await getDashboardBriefing({
     userId: user.id,
     churchId,

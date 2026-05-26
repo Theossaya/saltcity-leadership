@@ -499,3 +499,16 @@ Basic installability metadata was added without offline submission behavior:
 - Updated root metadata with the application name, manifest link, app icon references, Apple web app metadata, and viewport theme colour.
 - Documented that browser installability is configured, while offline queued report submissions are not implemented for MVP and users still need a network connection for reports, follow-up, and task updates.
 - Made no database schema, SQL migration, RLS policy, Supabase query, Server Action, validation, permission, route, business-workflow, or UI page-design changes.
+
+## Phase 14E — Auth, login, and final smoke-test polish
+
+Login/session readiness was tightened for first real user testing without changing the auth model:
+
+- Polished `/login` to match the V2 Warm Berry direction with the SaltCity mark, official leadership copy, clear email/password fields, a clear submit button, and a calm error state.
+- Improved login failure copy so wrong-password or failed-login states do not expose Supabase internals and ask leaders to check their details before trying again.
+- Added layout revalidation after login and logout so switching from admin to leader in the same browser session does not keep stale app UI.
+- Reviewed route protection for `/dashboard`, `/reports`, `/follow-up`, `/tasks`, `/announcements`, `/events`, `/companies`, and `/more`; the existing protected route matcher already covers these pages and redirects signed-out users to `/login`.
+- Migrated the request-boundary auth file from deprecated `middleware.ts` to Next 16 `src/proxy.ts` without changing the protected route list or access rules.
+- Added a clear signed-in/no-active-leadership-profile dashboard state for accounts with no active membership.
+- Updated `docs/launch-checklist.md` with final auth smoke tests for admin login, leader login, logout, protected redirects, wrong-password copy, and inactive/no-membership behavior when testable.
+- Made no SQL migration, RLS policy, database schema, permission model, protected route list, unrelated Server Action, or business-workflow changes.

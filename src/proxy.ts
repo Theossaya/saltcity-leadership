@@ -32,7 +32,7 @@ function redirectWithSessionCookies(
   return redirectResponse;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { response, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
   const isProtectedRoute = protectedRoutes.some((route) =>
