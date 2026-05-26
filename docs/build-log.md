@@ -489,3 +489,13 @@ The project was audited for demo/test readiness before launch without broad feat
 - Added manual launch smoke test coverage for admin, company leader, and assigned/general leader flows.
 - Documented PWA/deployment basics, required environment variables, test account expectations, and known MVP limitations.
 - Made no database schema, SQL migration, RLS policy, Server Action, route, permission model, product scope, or visual design changes.
+
+## Phase 14D — Basic PWA install readiness
+
+Basic installability metadata was added without offline submission behavior:
+
+- Added a typed App Router manifest for SaltCity Leadership with `/dashboard` start URL, standalone display, portrait orientation, Warm Berry colours, and PNG app icon references.
+- Generated `public/icons/icon-192.png`, `public/icons/icon-512.png`, and `public/icons/apple-touch-icon.png` from the existing SaltCity white logo on the Warm Berry primary background.
+- Updated root metadata with the application name, manifest link, app icon references, Apple web app metadata, and viewport theme colour.
+- Documented that browser installability is configured, while offline queued report submissions are not implemented for MVP and users still need a network connection for reports, follow-up, and task updates.
+- Made no database schema, SQL migration, RLS policy, Supabase query, Server Action, validation, permission, route, business-workflow, or UI page-design changes.

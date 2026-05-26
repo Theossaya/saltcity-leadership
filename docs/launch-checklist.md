@@ -115,16 +115,17 @@ Assigned/general leader:
 
 ## PWA and deployment readiness
 
-Current audit:
+Current Phase 14D status:
 
 - `public/brand/logo.svg` and `public/brand/logo-white.svg` exist and are used by the V2 header/design system.
 - No missing production logo reference was found in `src/`.
-- No `src/app/manifest.ts`, `src/app/manifest.json`, or web app icon set is present.
+- `src/app/manifest.ts` is present with the SaltCity Leadership app name, `/dashboard` start URL, standalone display, portrait orientation, Warm Berry background/theme colours, and PNG app icons.
+- `public/icons/icon-192.png`, `public/icons/icon-512.png`, and `public/icons/apple-touch-icon.png` were generated from `public/brand/logo-white.svg` on the Warm Berry primary background.
+- Root metadata in `src/app/layout.tsx` includes the app name, manifest link, icon references, Apple web app metadata, and a viewport `themeColor`.
 - No service worker/offline mode is present.
-- Root metadata exists in `src/app/layout.tsx`, but there is no explicit `viewport` export or `themeColor`. Next.js provides the default mobile viewport unless customized.
 - Mobile safe-area spacing is present in the app shell and bottom navigation.
 
-Launch note: this is mobile-first web/PWA-shaped, but installable PWA packaging is not complete until a manifest and app icon set are added. Offline queued submissions are not included.
+Launch note: the app can be installed where the browser accepts the configured manifest and icon set. Offline queued report submissions are not part of the MVP yet. Users need a network connection to submit reports, follow-up updates, and tasks.
 
 ## Environment readiness
 
@@ -141,7 +142,6 @@ Do not expose service-role keys in browser code or checked-in env files.
 
 - No push notifications yet.
 - No offline queued report submissions or sync.
-- No installable PWA manifest/icon set yet.
 - No announcement acknowledgement/read receipt UI yet, although `announcement_reads` exists in the schema.
 - No event creation/editing UI yet.
 - No member edit/deactivate UI yet.
