@@ -512,3 +512,11 @@ Login/session readiness was tightened for first real user testing without changi
 - Added a clear signed-in/no-active-leadership-profile dashboard state for accounts with no active membership.
 - Updated `docs/launch-checklist.md` with final auth smoke tests for admin login, leader login, logout, protected redirects, wrong-password copy, and inactive/no-membership behavior when testable.
 - Made no SQL migration, RLS policy, database schema, permission model, protected route list, unrelated Server Action, or business-workflow changes.
+
+## Phase 15A — Final end-to-end launch smoke test checklist
+
+The final practical QA checklist for first real user testing was added without changing application behavior:
+
+- Added `docs/final-smoke-test.md` with pre-test setup, auth, admin, company leader, assigned/general leader, mobile, PWA, and pass/fail recording sections.
+- Linked the final smoke test from `docs/launch-checklist.md`.
+- Made no code, SQL, RLS, database schema, permission model, Server Action behavior, validation, business workflow, design system, or product-scope changes.

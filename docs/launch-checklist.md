@@ -2,6 +2,8 @@
 
 Phase 14C audit scope: demo data, seed sanity, migration order, and launch readiness. This checklist is for Supabase/manual QA readiness before an MVP demo or pilot launch.
 
+For the final first-user-testing pass, use `docs/final-smoke-test.md` after this readiness checklist is complete.
+
 ## SQL migration checklist
 
 Run the files in filename order. Files marked "Yes" must be applied to Supabase for the current app behavior. `010_demo_data.sql` is dev/test only and should not be run in production.
