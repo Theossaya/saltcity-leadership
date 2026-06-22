@@ -25,7 +25,7 @@ export default async function ReportDetailPage({ params }: { params: { id: strin
 
   const { data: attendance } = await supabase
     .from('attendance_records')
-    .select('present, member:members(full_name)')
+    .select('present, absence_reason, member:members(full_name)')
     .eq('report_id', report.id)
 
   const records = attendance ?? []
@@ -34,11 +34,13 @@ export default async function ReportDetailPage({ params }: { params: { id: strin
 
   const statusWord =
     report.status === 'reviewed'
-      ? 'reviewed.'
+      ? 'approved.'
       : report.status === 'flagged'
-        ? 'flagged.'
+        ? 'sent back.'
         : report.status === 'draft'
-          ? 'in progress.'
+          ? report.flag_reason
+            ? 'sent back.'
+            : 'in progress.'
           : 'awaiting review.'
 
   return (
@@ -61,9 +63,9 @@ export default async function ReportDetailPage({ params }: { params: { id: strin
         }
       />
 
-      {report.status === 'flagged' && report.flag_reason && (
+      {report.flag_reason && report.status !== 'reviewed' && (
         <div className="mx-5 mt-4 px-3.5 py-3 bg-care-bg rounded-input text-[13px] text-care font-medium leading-[1.45]">
-          Flag reason: {report.flag_reason}
+          Sent back to the leader: {report.flag_reason}
         </div>
       )}
 
@@ -80,6 +82,7 @@ export default async function ReportDetailPage({ params }: { params: { id: strin
                 key={i}
                 lead={<Avatar initials={initialsOf(a.member?.full_name ?? '?')} size="sm" />}
                 title={a.member?.full_name ?? 'Member'}
+                sub={a.absence_reason ?? undefined}
               />
             ))}
           </RowList>

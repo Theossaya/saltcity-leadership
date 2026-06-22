@@ -177,6 +177,7 @@ export type Database = {
           assigned_by: string | null
           status: Database['public']['Enums']['follow_up_status']
           urgency: Database['public']['Enums']['urgency_level']
+          escalated: boolean
           context_note: string | null
           resolved_at: string | null
           created_at: string
@@ -191,6 +192,7 @@ export type Database = {
           assigned_by?: string | null
           status?: Database['public']['Enums']['follow_up_status']
           urgency?: Database['public']['Enums']['urgency_level']
+          escalated?: boolean
           context_note?: string | null
           resolved_at?: string | null
           created_at?: string
@@ -205,6 +207,7 @@ export type Database = {
           assigned_by?: string | null
           status?: Database['public']['Enums']['follow_up_status']
           urgency?: Database['public']['Enums']['urgency_level']
+          escalated?: boolean
           context_note?: string | null
           resolved_at?: string | null
           created_at?: string
@@ -297,6 +300,7 @@ export type Database = {
         Row: {
           id: string
           full_name: string
+          phone: string | null
           company_id: string
           status: Database['public']['Enums']['member_status']
           created_at: string
@@ -305,6 +309,7 @@ export type Database = {
         Insert: {
           id?: string
           full_name: string
+          phone?: string | null
           company_id: string
           status?: Database['public']['Enums']['member_status']
           created_at?: string
@@ -313,6 +318,7 @@ export type Database = {
         Update: {
           id?: string
           full_name?: string
+          phone?: string | null
           company_id?: string
           status?: Database['public']['Enums']['member_status']
           created_at?: string

@@ -12,12 +12,12 @@ interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantCls: Record<Variant, string> = {
-  berry: 'bg-primary text-primary-ink',
-  ink: 'bg-ink text-bg',
-  light: 'bg-white text-primary font-semibold',
-  ghost: 'bg-transparent text-ink shadow-[inset_0_0_0_1px_var(--rule-strong)]',
-  onhero: 'bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]',
-  accent: 'bg-accent text-white',
+  berry: 'bg-primary text-primary-ink active:brightness-110',
+  ink: 'bg-ink text-bg active:brightness-125',
+  light: 'bg-white text-primary font-semibold active:bg-bg-2',
+  ghost: 'bg-transparent text-ink shadow-[inset_0_0_0_1px_var(--rule-strong)] active:bg-bg-2',
+  onhero: 'bg-white/15 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)] active:bg-white/25',
+  accent: 'bg-accent text-white active:brightness-110',
 }
 const sizeCls: Record<Size, string> = {
   sm: 'px-3 py-2 text-[12.5px] rounded-[10px] gap-[5px] [&_svg]:w-3.5 [&_svg]:h-3.5',

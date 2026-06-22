@@ -79,6 +79,7 @@ create table profiles (
 create table members (
   id          uuid primary key default uuid_generate_v4(),
   full_name   text not null,
+  phone       text,
   company_id  uuid not null references companies(id) on delete cascade,
   status      member_status not null default 'active',
   created_at  timestamptz not null default now(),
@@ -132,7 +133,8 @@ create table follow_up_cases (
   assigned_by     uuid references profiles(id) on delete set null,
   status          follow_up_status not null default 'new',
   urgency         urgency_level not null default 'normal',
-  context_note    text,   -- admin note added when assigning
+  escalated       boolean not null default false,   -- leader asked the office for help
+  context_note    text,   -- absence reason / note carried onto the case
   resolved_at     timestamptz,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
@@ -516,11 +518,16 @@ as $$
 begin
   -- Only fire when status changes to 'submitted'
   if new.status = 'submitted' and old.status = 'draft' then
-    insert into public.follow_up_cases (member_id, report_id, company_id)
+    -- Each absentee case defaults to the submitting company's leader, and carries
+    -- the absence reason the leader gave.
+    insert into public.follow_up_cases (member_id, report_id, company_id, assigned_to, status, context_note)
     select
       ar.member_id,
       ar.report_id,
-      new.company_id
+      new.company_id,
+      new.submitted_by,
+      'assigned',
+      ar.absence_reason
     from public.attendance_records ar
     where ar.report_id = new.id
       and ar.present = false

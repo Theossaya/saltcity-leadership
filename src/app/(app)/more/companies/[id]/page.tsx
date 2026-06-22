@@ -32,7 +32,7 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
     await Promise.all([
       supabase
         .from('members')
-        .select('id, full_name')
+        .select('id, full_name, phone')
         .eq('company_id', company.id)
         .eq('status', 'active')
         .order('full_name'),

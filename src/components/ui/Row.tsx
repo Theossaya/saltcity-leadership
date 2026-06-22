@@ -33,7 +33,10 @@ export default function Row({ lead, title, sub, tail, dimmed, href }: Props) {
   if (href) {
     return (
       <li className={dimmed ? 'opacity-50' : ''}>
-        <Link href={href} className={layout}>
+        <Link
+          href={href}
+          className={`${layout} -mx-2 px-2 rounded-[10px] transition-colors active:bg-bg-2`}
+        >
           <RowInner lead={lead} title={title} sub={sub} tail={tail} />
         </Link>
       </li>

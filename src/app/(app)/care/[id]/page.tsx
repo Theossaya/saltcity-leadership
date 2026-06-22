@@ -7,6 +7,7 @@ import SectionLabel from '@/components/ui/SectionLabel'
 import Row, { RowList } from '@/components/ui/Row'
 import Avatar from '@/components/ui/Avatar'
 import StatusDot from '@/components/ui/StatusDot'
+import { PhoneIcon } from '@/components/ui/Icons'
 import CaseActions from '@/components/care/CaseActions'
 import AssignCaseForm from '@/components/care/AssignCaseForm'
 
@@ -19,7 +20,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
   const { data: caseRow } = await supabase
     .from('follow_up_cases')
     .select(
-      'id, status, urgency, context_note, created_at, resolved_at, member:members(full_name), company:companies(name), assignee:profiles!follow_up_cases_assigned_to_fkey(full_name)'
+      'id, status, urgency, escalated, context_note, created_at, resolved_at, member:members(full_name, phone), company:companies(name), assignee:profiles!follow_up_cases_assigned_to_fkey(full_name)'
     )
     .eq('id', params.id)
     .maybeSingle()
@@ -34,6 +35,7 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
 
   const admin = isAdminOrOffice(profile.role)
   const memberName = caseRow.member?.full_name ?? 'Member'
+  const phone = caseRow.member?.phone ?? null
   const resolved = caseRow.status === 'resolved'
   const needsAssign = admin && (caseRow.status === 'new' || !caseRow.assignee)
 
@@ -74,14 +76,33 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
               </div>
               {caseRow.assignee && (
                 <div className="text-[12px] text-ink-3 mt-1">
-                  Assigned to {firstNameOf(caseRow.assignee.full_name)}
+                  With {firstNameOf(caseRow.assignee.full_name)}
+                  {caseRow.escalated && <span className="text-accent font-medium"> · office notified</span>}
                 </div>
               )}
             </div>
+            {phone && (
+              <a
+                href={`tel:${phone}`}
+                aria-label={`Call ${memberName}`}
+                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-[10px]
+                           bg-calm-soft text-calm text-[12.5px] font-semibold active:scale-95 transition-transform
+                           [&_svg]:w-4 [&_svg]:h-4"
+              >
+                <PhoneIcon />
+                Call
+              </a>
+            )}
           </div>
 
+          {phone && (
+            <a href={`tel:${phone}`} className="block text-[13px] text-ink-2 mt-3 active:opacity-60">
+              <span className="text-ink-3">Phone:</span> <span className="font-medium">{phone}</span>
+            </a>
+          )}
+
           {caseRow.context_note && (
-            <div className="px-3.5 py-3 bg-bg-2 rounded-[12px] text-[13px] text-ink-2 leading-[1.5] mt-3.5">
+            <div className="px-3.5 py-3 bg-bg-2 rounded-[12px] text-[13px] text-ink-2 leading-[1.5] mt-3.5 whitespace-pre-line">
               {caseRow.context_note}
             </div>
           )}
@@ -89,7 +110,9 @@ export default async function CaseDetailPage({ params }: { params: { id: string 
           {needsAssign ? (
             <AssignCaseForm caseId={caseRow.id} leaders={leaders} initialUrgency={caseRow.urgency} />
           ) : (
-            !resolved && <CaseActions caseId={caseRow.id} />
+            !resolved && (
+              <CaseActions caseId={caseRow.id} showEscalate={!admin && !caseRow.escalated} />
+            )
           )}
         </div>
       </div>

@@ -11,15 +11,15 @@ interface Props {
   status: 'submitted' | 'reviewed' | 'flagged'
 }
 
-// Inline state flip for flagging — no modal.
+// Inline state flip for "send back" — no modal.
 export default function ReviewActions({ reportId, status }: Props) {
   const router = useRouter()
-  const [flagging, setFlagging] = useState(false)
+  const [sendingBack, setSendingBack] = useState(false)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
-  function onReview() {
+  function onApprove() {
     startTransition(async () => {
       const result = await reviewReport(reportId)
       if ('error' in result) setError(result.error)
@@ -27,12 +27,12 @@ export default function ReviewActions({ reportId, status }: Props) {
     })
   }
 
-  function onFlag() {
+  function onSendBack() {
     startTransition(async () => {
       const result = await flagReport(reportId, reason.trim())
       if ('error' in result) setError(result.error)
       else {
-        setFlagging(false)
+        setSendingBack(false)
         setReason('')
         router.refresh()
       }
@@ -42,39 +42,42 @@ export default function ReviewActions({ reportId, status }: Props) {
   return (
     <div className="mt-4">
       {error && <FeedbackBanner type="error" message={error} onDismiss={() => setError(null)} />}
-      {!flagging ? (
-        <div className="px-5 flex gap-2.5">
-          {status !== 'reviewed' && (
-            <Button variant="berry" size="lg" className="flex-[1.5]" onClick={onReview} pending={pending}>
-              Mark reviewed
+      {!sendingBack ? (
+        <div className="px-5">
+          <div className="flex gap-2.5">
+            {status !== 'reviewed' && (
+              <Button variant="berry" size="lg" className="flex-[1.5]" onClick={onApprove} pending={pending}>
+                {status === 'flagged' ? 'Approve now' : 'Approve report'}
+              </Button>
+            )}
+            <Button variant="ghost" size="lg" className="flex-1" onClick={() => setSendingBack(true)}>
+              {status === 'flagged' ? 'Edit note' : 'Send back'}
             </Button>
-          )}
-          {status !== 'flagged' && (
-            <Button variant="ghost" size="lg" className="flex-1" onClick={() => setFlagging(true)}>
-              Flag
-            </Button>
-          )}
-          {status === 'flagged' && (
-            <Button variant="ghost" size="lg" className="flex-1" onClick={() => setFlagging(true)}>
-              Edit flag
-            </Button>
-          )}
+          </div>
+          <p className="text-[11.5px] text-ink-3 mt-2 leading-[1.4]">
+            <b className="text-ink-2 font-semibold">Approve</b> accepts the report.{' '}
+            <b className="text-ink-2 font-semibold">Send back</b> returns it to the leader with a note
+            about what to fix.
+          </p>
         </div>
       ) : (
         <div className="px-5 flex flex-col gap-2.5">
+          <label className="text-[13px] font-medium text-ink-2">
+            What should the leader fix? They&rsquo;ll see this note.
+          </label>
           <textarea
             className={textareaCls}
-            placeholder="Why is this report being flagged? The leader will see this."
+            placeholder="e.g. Please add a reason for the members marked absent."
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             autoFocus
           />
           <div className="flex gap-2.5">
-            <Button variant="ghost" size="lg" className="flex-1" onClick={() => setFlagging(false)}>
+            <Button variant="ghost" size="lg" className="flex-1" onClick={() => setSendingBack(false)}>
               Cancel
             </Button>
-            <Button variant="berry" size="lg" className="flex-[1.5]" onClick={onFlag} pending={pending}>
-              Flag report
+            <Button variant="berry" size="lg" className="flex-[1.5]" onClick={onSendBack} pending={pending}>
+              Send back to leader
             </Button>
           </div>
         </div>

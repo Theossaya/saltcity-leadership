@@ -1,12 +1,13 @@
 'use client'
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Greeting from '@/components/ui/Greeting'
 import SectionLabel from '@/components/ui/SectionLabel'
 import MemberGrid from '@/components/ui/MemberGrid'
 import Button from '@/components/ui/Button'
 import FeedbackBanner from '@/components/ui/FeedbackBanner'
-import { textareaCls } from '@/components/ui/Field'
+import { inputCls, textareaCls } from '@/components/ui/Field'
+import { initialsOf } from '@/lib/utils'
 import { SendIcon } from '@/components/ui/Icons'
 import { saveDraft, submitReport } from '@/app/(app)/report/actions'
 
@@ -25,8 +26,10 @@ interface Props {
   weekRange: string
   members: Member[]
   initialReportId?: string
-  initialAbsentIds: string[]
+  initialPresentIds: string[]
+  initialReasons: Record<string, string>
   initialNotes: string
+  sentBackReason?: string | null
 }
 
 export default function ReportForm({
@@ -37,11 +40,14 @@ export default function ReportForm({
   weekRange,
   members,
   initialReportId,
-  initialAbsentIds,
+  initialPresentIds,
+  initialReasons,
   initialNotes,
+  sentBackReason,
 }: Props) {
   const router = useRouter()
-  const [absentIds, setAbsentIds] = useState<string[]>(initialAbsentIds)
+  const [presentIds, setPresentIds] = useState<string[]>(initialPresentIds)
+  const [reasons, setReasons] = useState<Record<string, string>>(initialReasons)
   const [notes, setNotes] = useState(initialNotes)
   const [reportId, setReportId] = useState(initialReportId)
   const [savedAt, setSavedAt] = useState<Date | null>(initialReportId ? new Date() : null)
@@ -49,20 +55,24 @@ export default function ReportForm({
   const [saving, startSaving] = useTransition()
   const [submitting, startSubmitting] = useTransition()
 
-  // Latest form values for the autosave timer without re-arming it on every keystroke
-  const latest = useRef({ absentIds, notes, reportId })
-  latest.current = { absentIds, notes, reportId }
+  const presentSet = useMemo(() => new Set(presentIds), [presentIds])
+  const absentees = useMemo(() => members.filter((m) => !presentSet.has(m.id)), [members, presentSet])
+
+  // Latest values for the autosave timer without re-arming on every keystroke
+  const latest = useRef({ presentIds, reasons, notes, reportId })
+  latest.current = { presentIds, reasons, notes, reportId }
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const doSave = useCallback(async () => {
-    const { absentIds, notes, reportId } = latest.current
+    const { presentIds, reasons, notes, reportId } = latest.current
     const result = await saveDraft({
       reportId,
       companyId,
       weekStart,
       weekNumber,
       year,
-      absentIds,
+      presentIds,
+      reasons,
       notes,
     })
     if ('error' in result) {
@@ -89,8 +99,23 @@ export default function ReportForm({
     }
   }, [])
 
-  function toggleMember(id: string) {
-    setAbsentIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  function togglePresent(id: string) {
+    setPresentIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+    scheduleAutosave()
+  }
+
+  function markAllPresent() {
+    setPresentIds(members.map((m) => m.id))
+    scheduleAutosave()
+  }
+
+  function clearAll() {
+    setPresentIds([])
+    scheduleAutosave()
+  }
+
+  function setReason(memberId: string, value: string) {
+    setReasons((prev) => ({ ...prev, [memberId]: value }))
     scheduleAutosave()
   }
 
@@ -116,7 +141,7 @@ export default function ReportForm({
     })
   }
 
-  const presentCount = members.length - absentIds.length
+  const allPresent = presentIds.length === members.length && members.length > 0
   const busy = saving || submitting
 
   return (
@@ -126,16 +151,60 @@ export default function ReportForm({
       )}
 
       <Greeting day={`Week ${weekNumber} · ${weekRange}`}>
-        Mark <em>absentees.</em>
+        Who was <em>here?</em>
       </Greeting>
 
-      <div className="px-5 pt-3 flex gap-[26px]">
-        <Count value={presentCount} suffix={`/${members.length}`} label="Present" />
-        <Count value={absentIds.length} label="Absent" urgent={absentIds.length > 0} />
+      {sentBackReason && (
+        <div className="mx-5 mt-3 px-3.5 py-3 bg-care-bg rounded-input text-[13px] text-care font-medium leading-[1.45]">
+          The office sent this back: {sentBackReason}
+        </div>
+      )}
+
+      <div className="px-5 pt-3 flex items-center justify-between gap-3">
+        <div className="flex gap-[26px]">
+          <Count value={presentIds.length} suffix={`/${members.length}`} label="Present" tone="ok" />
+          <Count value={absentees.length} label="Absent" tone={absentees.length > 0 ? 'urgent' : undefined} />
+        </div>
+        <Button variant="ghost" size="sm" onClick={allPresent ? clearAll : markAllPresent} disabled={busy}>
+          {allPresent ? 'Clear all' : 'All present'}
+        </Button>
       </div>
 
-      <SectionLabel label="Tap anyone who was away" />
-      <MemberGrid members={members} absentIds={absentIds} onToggle={toggleMember} disabled={busy} />
+      <SectionLabel label="Tap everyone who attended" />
+      <MemberGrid
+        members={members}
+        selectedIds={presentIds}
+        onToggle={togglePresent}
+        disabled={busy}
+        tone="present"
+      />
+
+      {absentees.length > 0 && (
+        <>
+          <SectionLabel label="Absent — add a reason (optional)" />
+          <ul className="mx-5 my-0 p-0 list-none [&>li+li]:border-t [&>li+li]:border-[var(--rule)]">
+            {absentees.map((m) => (
+              <li key={m.id} className="flex gap-[11px] items-center py-2.5">
+                <span className="w-7 h-7 rounded-full bg-bg-2 text-ink-2 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                  {initialsOf(m.full_name)}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13.5px] font-medium text-ink truncate leading-tight mb-1">
+                    {m.full_name}
+                  </div>
+                  <input
+                    className={`${inputCls} !py-2 !text-[13px]`}
+                    placeholder="e.g. travelling, unwell, no reason yet"
+                    value={reasons[m.id] ?? ''}
+                    onChange={(e) => setReason(m.id, e.target.value)}
+                    disabled={busy}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <SectionLabel label="Anything to share?" />
       <div className="px-5">
@@ -172,18 +241,17 @@ function Count({
   value,
   suffix,
   label,
-  urgent,
+  tone,
 }: {
   value: number
   suffix?: string
   label: string
-  urgent?: boolean
+  tone?: 'ok' | 'urgent'
 }) {
+  const color = tone === 'urgent' ? 'text-urgent' : tone === 'ok' ? 'text-ok' : 'text-ink'
   return (
     <div className="flex flex-col gap-[3px] min-w-0">
-      <div
-        className={`text-[24px] font-medium tracking-[-0.024em] leading-none tabular-nums ${urgent ? 'text-urgent' : 'text-ink'}`}
-      >
+      <div className={`text-[24px] font-medium tracking-[-0.024em] leading-none tabular-nums ${color}`}>
         {value}
         {suffix && <small className="text-[13px] text-ink-3 font-medium">{suffix}</small>}
       </div>

@@ -59,6 +59,42 @@ export async function recordContact(data: {
   return { success: true }
 }
 
+// A company leader asks the office/admins for help on a case they own. Keeps the
+// leader assigned but flags it for office attention and bumps it to urgent.
+export async function escalateCase(data: {
+  caseId: string
+  note?: string
+}): Promise<{ error: string } | { success: true }> {
+  await requireAuth() // RLS scopes the update to the case owner or admin/office
+  const supabase = createClient()
+
+  const { data: existing } = await supabase
+    .from('follow_up_cases')
+    .select('context_note')
+    .eq('id', data.caseId)
+    .maybeSingle()
+
+  const escalationNote = data.note?.trim()
+  const mergedNote = [existing?.context_note, escalationNote && `Asked office for help: ${escalationNote}`]
+    .filter(Boolean)
+    .join('\n\n')
+
+  const { error } = await supabase
+    .from('follow_up_cases')
+    .update({
+      escalated: true,
+      urgency: 'urgent',
+      context_note: mergedNote || null,
+    })
+    .eq('id', data.caseId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/care')
+  revalidatePath(`/care/${data.caseId}`)
+  revalidatePath('/')
+  return { success: true }
+}
+
 export async function resolveCase(caseId: string): Promise<{ error: string } | { success: true }> {
   const supabase = createClient()
   await requireAuth()

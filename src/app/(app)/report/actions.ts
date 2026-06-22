@@ -9,7 +9,8 @@ export async function saveDraft(data: {
   weekStart: string
   weekNumber: number
   year: number
-  absentIds: string[]
+  presentIds: string[]
+  reasons: Record<string, string> // memberId -> absence reason (absentees only)
   notes: string
 }): Promise<{ error: string } | { reportId: string }> {
   const supabase = createClient()
@@ -35,7 +36,8 @@ export async function saveDraft(data: {
 
   if (error) return { error: error.message }
 
-  // Upsert attendance for all active members
+  // Upsert attendance for all active members. Present = leader marked them;
+  // everyone else is absent, with the reason the leader attached (if any).
   const { data: allMembers, error: membersError } = await supabase
     .from('members')
     .select('id')
@@ -45,12 +47,17 @@ export async function saveDraft(data: {
   if (membersError) return { error: membersError.message }
 
   if (allMembers && allMembers.length > 0) {
+    const present = new Set(data.presentIds)
     const { error: attendanceError } = await supabase.from('attendance_records').upsert(
-      allMembers.map((m) => ({
-        report_id: report.id,
-        member_id: m.id,
-        present: !data.absentIds.includes(m.id),
-      })),
+      allMembers.map((m) => {
+        const isPresent = present.has(m.id)
+        return {
+          report_id: report.id,
+          member_id: m.id,
+          present: isPresent,
+          absence_reason: isPresent ? null : data.reasons[m.id]?.trim() || null,
+        }
+      }),
       { onConflict: 'report_id,member_id' }
     )
     if (attendanceError) return { error: attendanceError.message }
@@ -66,7 +73,7 @@ export async function submitReport(reportId: string): Promise<{ error: string } 
 
   const { error } = await supabase
     .from('weekly_reports')
-    .update({ status: 'submitted' })
+    .update({ status: 'submitted', flag_reason: null }) // clear any prior send-back note
     .eq('id', reportId)
 
   if (error) return { error: error.message }
@@ -106,14 +113,17 @@ export async function flagReport(
   const { profile } = await requireAuth()
   if (profile.role !== 'church_admin') return { error: 'Only the church admin can flag reports.' }
 
+  // "Send back" returns the report to an editable draft, carrying the note. The
+  // leader sees it, fixes the report, and resubmits — reusing the normal draft
+  // RLS + the submit trigger. flag_reason present on a draft = "sent back".
   const supabase = createClient()
   const { error } = await supabase
     .from('weekly_reports')
     .update({
-      status: 'flagged',
+      status: 'draft',
       reviewed_by: profile.id,
       reviewed_at: new Date().toISOString(),
-      flag_reason: reason || null,
+      flag_reason: reason || 'Please review and resubmit.',
     })
     .eq('id', reportId)
 

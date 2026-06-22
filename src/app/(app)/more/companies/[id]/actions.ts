@@ -5,7 +5,8 @@ import { revalidatePath } from 'next/cache'
 
 export async function addMember(
   companyId: string,
-  fullName: string
+  fullName: string,
+  phone?: string
 ): Promise<{ error: string } | { success: true }> {
   const { profile } = await requireAuth()
   // Admin/office add anywhere; a leader may add to their own company only.
@@ -16,7 +17,29 @@ export async function addMember(
   if (!name) return { error: 'Please enter a name.' }
 
   const supabase = createClient()
-  const { error } = await supabase.from('members').insert({ full_name: name, company_id: companyId })
+  const { error } = await supabase
+    .from('members')
+    .insert({ full_name: name, phone: phone?.trim() || null, company_id: companyId })
+
+  if (error) return { error: error.message }
+  revalidatePath(`/more/companies/${companyId}`)
+  return { success: true }
+}
+
+export async function updateMemberPhone(
+  memberId: string,
+  companyId: string,
+  phone: string
+): Promise<{ error: string } | { success: true }> {
+  const { profile } = await requireAuth()
+  const canEdit = isAdminOrOffice(profile.role) || profile.company_id === companyId
+  if (!canEdit) return { error: 'You can only edit your own company.' }
+
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('members')
+    .update({ phone: phone.trim() || null })
+    .eq('id', memberId)
 
   if (error) return { error: error.message }
   revalidatePath(`/more/companies/${companyId}`)

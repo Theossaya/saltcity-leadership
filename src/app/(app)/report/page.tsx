@@ -52,54 +52,68 @@ async function LeaderReport({ profile }: { profile: Profile }) {
       .maybeSingle(),
   ])
 
-  // Submitted / reviewed / flagged — read-only summary
+  // Submitted / reviewed / sent-back — read-only summary
   if (report && report.status !== 'draft') {
     const { data: absences } = await supabase
       .from('attendance_records')
-      .select('member:members(full_name)')
+      .select('absence_reason, member:members(full_name)')
       .eq('report_id', report.id)
       .eq('present', false)
 
-    const absentNames = (absences ?? []).map((a) => a.member?.full_name).filter(Boolean) as string[]
+    const absentList = (absences ?? []).filter((a) => a.member)
     const total = members?.length ?? 0
+    const sentBack = report.status === 'flagged'
 
     return (
       <>
         <Greeting day={`Week ${weekNumber} · ${weekRange}`}>
-          Report <em>submitted.</em>
+          {sentBack ? (
+            <>
+              Report <em>sent back.</em>
+            </>
+          ) : (
+            <>
+              Report <em>submitted.</em>
+            </>
+          )}
         </Greeting>
         <Hero
           label="This week's report"
           title={
-            report.status === 'flagged' ? (
+            sentBack ? (
               <>
-                Week {weekNumber} — <em>flagged.</em>
+                Week {weekNumber} — <em>needs changes.</em>
               </>
             ) : (
               <>
-                Week {weekNumber} — <em>{report.status === 'reviewed' ? 'reviewed.' : 'submitted.'}</em>
+                Week {weekNumber} — <em>{report.status === 'reviewed' ? 'approved.' : 'submitted.'}</em>
               </>
             )
           }
           meta={
             <>
-              <b>{total - absentNames.length} present</b> · {absentNames.length} absent
+              <b>{total - absentList.length} present</b> · {absentList.length} absent
             </>
           }
         />
 
-        {report.status === 'flagged' && report.flag_reason && (
+        {sentBack && report.flag_reason && (
           <div className="mx-5 mt-4 px-3.5 py-3 bg-care-bg rounded-input text-[13px] text-care font-medium leading-[1.45]">
-            Flagged by the office: {report.flag_reason}
+            The office asked for a change: {report.flag_reason}
           </div>
         )}
 
-        {absentNames.length > 0 && (
+        {absentList.length > 0 && (
           <>
             <SectionLabel label="Marked absent" />
             <RowList>
-              {absentNames.map((name) => (
-                <Row key={name} lead={<Avatar initials={initialsOf(name)} size="sm" />} title={name} />
+              {absentList.map((a, i) => (
+                <Row
+                  key={i}
+                  lead={<Avatar initials={initialsOf(a.member?.full_name ?? '?')} size="sm" />}
+                  title={a.member?.full_name ?? 'Member'}
+                  sub={a.absence_reason ?? undefined}
+                />
               ))}
             </RowList>
           </>
@@ -115,15 +129,18 @@ async function LeaderReport({ profile }: { profile: Profile }) {
     )
   }
 
-  // Draft (or not started) — the form
-  let absentIds: string[] = []
+  // Draft (or not started) — the form. Compute who's already marked present + reasons.
+  let presentIds: string[] = []
+  let reasons: Record<string, string> = {}
   if (report) {
-    const { data: absences } = await supabase
+    const { data: attendance } = await supabase
       .from('attendance_records')
-      .select('member_id')
+      .select('member_id, present, absence_reason')
       .eq('report_id', report.id)
-      .eq('present', false)
-    absentIds = (absences ?? []).map((a) => a.member_id)
+    for (const a of attendance ?? []) {
+      if (a.present) presentIds.push(a.member_id)
+      else if (a.absence_reason) reasons[a.member_id] = a.absence_reason
+    }
   }
 
   return (
@@ -135,19 +152,21 @@ async function LeaderReport({ profile }: { profile: Profile }) {
       weekRange={weekRange}
       members={members ?? []}
       initialReportId={report?.id}
-      initialAbsentIds={absentIds}
+      initialPresentIds={presentIds}
+      initialReasons={reasons}
       initialNotes={report?.notes ?? ''}
+      sentBackReason={report?.flag_reason ?? null}
     />
   )
 }
 
-// ===== Admin / Office: review queue =====
+// ===== Admin / Office: report review =====
 
 const statusSub: Record<string, React.ReactNode> = {
-  submitted: <StatusDot tone="care">Awaiting review</StatusDot>,
-  reviewed: <StatusDot tone="ok">Reviewed</StatusDot>,
-  flagged: <StatusDot tone="urgent">Flagged</StatusDot>,
-  draft: <StatusDot>In progress</StatusDot>,
+  submitted: <StatusDot tone="care">Waiting for you to review</StatusDot>,
+  reviewed: <StatusDot tone="ok">Approved</StatusDot>,
+  flagged: <StatusDot tone="care">Sent back to leader</StatusDot>,
+  draft: <StatusDot>Still being filled in</StatusDot>,
 }
 
 async function AdminQueue() {
@@ -159,7 +178,7 @@ async function AdminQueue() {
     supabase.from('companies').select('id, name').order('name'),
     supabase
       .from('weekly_reports')
-      .select('id, status, company_id, submitter:profiles!weekly_reports_submitted_by_fkey(full_name)')
+      .select('id, status, flag_reason, company_id, submitter:profiles!weekly_reports_submitted_by_fkey(full_name)')
       .eq('week_start', weekStart),
   ])
 
@@ -176,11 +195,14 @@ async function AdminQueue() {
   return (
     <>
       <Greeting day={`Week ${weekNumber} · ${weekRange}`}>
-        Review <em>queue.</em>
+        This week&rsquo;s <em>reports.</em>
       </Greeting>
 
       <div className="px-5 pt-2">
-        <Link href="/export" className="text-[13px] text-primary font-semibold">
+        <Link
+          href="/export"
+          className="text-[13px] text-primary font-semibold active:opacity-60 transition-opacity"
+        >
           Export week summary →
         </Link>
       </div>
@@ -200,7 +222,7 @@ async function AdminQueue() {
                 tail={
                   r.status === 'submitted' ? (
                     <Button variant="ghost" size="sm">
-                      Review
+                      Open &amp; review
                     </Button>
                   ) : (
                     <ChevronIcon />
@@ -222,9 +244,18 @@ async function AdminQueue() {
             return (
               <Row
                 key={c.id}
+                href={r && r.flag_reason ? `/report/${r.id}` : undefined}
                 lead={<Avatar initials={initialsOf(c.name)} />}
                 title={c.name}
-                sub={r ? statusSub.draft : <StatusDot>Not started</StatusDot>}
+                sub={
+                  r && r.flag_reason ? (
+                    <StatusDot tone="care">Sent back — awaiting fix</StatusDot>
+                  ) : r ? (
+                    statusSub.draft
+                  ) : (
+                    <StatusDot>Not started</StatusDot>
+                  )
+                }
               />
             )
           })}
