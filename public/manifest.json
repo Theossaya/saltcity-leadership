@@ -3,7 +3,7 @@
   "short_name": "SaltCity",
   "description": "Pastoral operations companion for SaltCity church leadership",
   "theme_color": "#6B2540",
-  "background_color": "#F4EFE8",
+  "background_color": "#6B2540",
   "display": "standalone",
   "orientation": "portrait",
   "start_url": "/",

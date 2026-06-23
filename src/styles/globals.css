@@ -62,6 +62,32 @@ button:active { transform: scale(0.985); transition: transform 60ms ease; }
 .sc-scroll::-webkit-scrollbar { display: none; }
 .sc-scroll { scrollbar-width: none; }
 
+/* Branded launch splash — matches the manifest background so it blends with the
+   OS splash, then fades out once the app is interactive (see BootSplash.tsx). */
+#sc-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  opacity: 1;
+  transition: opacity 0.35s ease;
+}
+#sc-splash.sc-splash--hide {
+  opacity: 0;
+  pointer-events: none;
+}
+#sc-splash .sc-splash__logo {
+  width: 150px;
+  height: auto;
+  animation: pulse-opacity 1.4s ease-in-out infinite;
+}
+@media print {
+  #sc-splash { display: none !important; }
+}
+
 /* Print: hide on-screen controls on the export view */
 @media print {
   .no-print { display: none !important; }

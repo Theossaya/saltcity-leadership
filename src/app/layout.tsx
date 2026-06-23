@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Instrument_Sans, Instrument_Serif } from 'next/font/google'
 import '@/styles/globals.css'
+import BootSplash from '@/components/ui/BootSplash'
 
 const sans = Instrument_Sans({
   subsets: ['latin'],
@@ -23,6 +24,10 @@ export const metadata: Metadata = {
   description: 'Pastoral operations companion for SaltCity church leadership',
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'SaltCity' },
+  icons: {
+    icon: '/icons/icon-192.png',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
@@ -34,7 +39,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable}`}>
-      <body className="bg-bg text-ink font-sans antialiased">{children}</body>
+      <body className="bg-bg text-ink font-sans antialiased">
+        <BootSplash />
+        {children}
+      </body>
     </html>
   )
 }
