@@ -323,14 +323,16 @@ create index events_event_date_idx on events(event_date);
 
 ```sql
 -- Current week number helper
-create or replace view current_week as
+-- security_invoker so the view respects RLS (avoids the "Security Definer View"
+-- advisor warning). Requires Postgres 15+.
+create or replace view current_week with (security_invoker = true) as
 select
   date_trunc('week', now())::date as week_start,
   extract(week from now())::int    as week_number,
   extract(year from now())::int    as year;
 
 -- Report submission summary for admin dashboard
-create or replace view report_submission_summary as
+create or replace view report_submission_summary with (security_invoker = true) as
 select
   wr.week_start,
   wr.week_number,
