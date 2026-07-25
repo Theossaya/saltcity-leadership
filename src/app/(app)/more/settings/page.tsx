@@ -6,7 +6,8 @@ import Greeting from '@/components/ui/Greeting'
 import SectionLabel from '@/components/ui/SectionLabel'
 import Row, { RowList } from '@/components/ui/Row'
 import Avatar from '@/components/ui/Avatar'
-import { BellIcon, LogoutIcon } from '@/components/ui/Icons'
+import EnablePush from '@/components/ui/EnablePush'
+import { LogoutIcon } from '@/components/ui/Icons'
 
 const roleLabel: Record<string, string> = {
   company_leader: 'Company Leader',
@@ -43,18 +44,7 @@ export default async function SettingsPage() {
       </RowList>
 
       <SectionLabel label="Notifications" />
-      <RowList>
-        <Row
-          dimmed
-          lead={
-            <div className="w-8 h-8 rounded-[10px] bg-bg-2 flex items-center justify-center text-ink-2 [&_svg]:w-[17px] [&_svg]:h-[17px]">
-              <BellIcon />
-            </div>
-          }
-          title="Push notifications"
-          tail={<span className="text-[11.5px] text-ink-3">Coming soon</span>}
-        />
-      </RowList>
+      <EnablePush />
 
       <div className="px-5 pt-5">
         <form action={signOut}>

@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
+import { sendPushToUsers } from '@/lib/push'
 import { revalidatePath } from 'next/cache'
 
 export async function createAnnouncement(data: {
@@ -22,6 +23,23 @@ export async function createAnnouncement(data: {
   })
 
   if (error) return { error: error.message }
+
+  // Notify the audience (best-effort; never blocks publishing).
+  const roles =
+    data.audience === 'admins'
+      ? ['church_admin', 'church_office']
+      : ['company_leader', 'assistant_leader', 'church_admin', 'church_office']
+  const { data: recipients } = await supabase.from('profiles').select('id').in('role', roles)
+  await sendPushToUsers(
+    (recipients ?? []).map((r) => r.id).filter((id) => id !== profile.id),
+    {
+      title: data.priority === 'urgent' ? `Urgent: ${data.title}` : data.title,
+      body: data.body,
+      url: '/more/announcements',
+      tag: 'announcement',
+    }
+  )
+
   revalidatePath('/more/announcements')
   revalidatePath('/')
   return { success: true }

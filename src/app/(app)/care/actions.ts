@@ -1,6 +1,7 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isAdminOrOffice } from '@/lib/auth'
+import { sendPushToUsers } from '@/lib/push'
 import { revalidatePath } from 'next/cache'
 
 export async function assignCase(data: {
@@ -25,6 +26,15 @@ export async function assignCase(data: {
     .eq('id', data.caseId)
 
   if (error) return { error: error.message }
+
+  // Let the assigned leader know (best-effort).
+  await sendPushToUsers([data.assignTo], {
+    title: 'New follow-up assigned',
+    body: 'A member from your company needs a follow-up. Tap to open.',
+    url: '/care',
+    tag: 'assignment',
+  })
+
   revalidatePath('/care')
   revalidatePath('/')
   return { success: true }
