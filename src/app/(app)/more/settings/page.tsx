@@ -12,8 +12,8 @@ import { LogoutIcon } from '@/components/ui/Icons'
 const roleLabel: Record<string, string> = {
   company_leader: 'Company Leader',
   assistant_leader: 'Assistant Leader',
-  church_admin: 'Church Admin',
-  church_office: 'Church Office',
+  church_admin: 'Head Coordinator',
+  church_office: 'Church Admin',
 }
 
 export default async function SettingsPage() {

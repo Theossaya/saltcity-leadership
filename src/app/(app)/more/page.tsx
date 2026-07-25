@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, isAdminOrOffice } from '@/lib/auth'
 import { signOut } from '@/app/(auth)/login/actions'
 import Greeting from '@/components/ui/Greeting'
 import SectionLabel from '@/components/ui/SectionLabel'
@@ -10,6 +10,7 @@ import {
   UsersIcon,
   BellIcon,
   ChevronIcon,
+  ChartIcon,
   PlusIcon,
   LogoutIcon,
 } from '@/components/ui/Icons'
@@ -23,7 +24,8 @@ function LeadIcon({ children }: { children: React.ReactNode }) {
 }
 
 export default async function MorePage() {
-  await requireAuth()
+  const { profile } = await requireAuth()
+  const admin = isAdminOrOffice(profile.role)
 
   return (
     <>
@@ -31,6 +33,14 @@ export default async function MorePage() {
 
       <SectionLabel label="Sections" />
       <RowList>
+        {admin && (
+          <Row
+            href="/more/trends"
+            lead={<LeadIcon><ChartIcon /></LeadIcon>}
+            title="Trends & charts"
+            tail={<ChevronIcon />}
+          />
+        )}
         <Row
           href="/more/announcements"
           lead={<LeadIcon><MegaphoneIcon /></LeadIcon>}

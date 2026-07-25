@@ -10,8 +10,8 @@ interface Props {
 const roleLabel: Record<string, string> = {
   company_leader: 'Company Leader',
   assistant_leader: 'Assistant Leader',
-  church_admin: 'Church Admin',
-  church_office: 'Church Office',
+  church_admin: 'Head Coordinator',
+  church_office: 'Church Admin',
 }
 
 export default function AppHeader({ role, name, hasNotif }: Props) {
