@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { SearchIcon, CheckIcon } from './Icons'
-import { initialsOf, firstNameOf } from '@/lib/utils'
+import { initialsOf, displayName } from '@/lib/utils'
 
 interface Member {
   id: string
@@ -75,7 +75,7 @@ export default function MemberGrid({ members, selectedIds, onToggle, disabled, t
                 className={`text-[13px] font-medium truncate tracking-[-0.008em]
                             ${on ? t.name : 'text-ink'}`}
               >
-                {firstNameOf(m.full_name)}
+                {displayName(m.full_name)}
               </span>
             </button>
           )

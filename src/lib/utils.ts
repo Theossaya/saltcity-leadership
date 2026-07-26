@@ -107,16 +107,41 @@ export function formatDueLabel(dueDate: string): string {
   return formatShortDate(dueDate)
 }
 
+// Common titles to skip so "Mrs. Chukwugozie Ave" reads as "Chukwugozie", not "Mrs."
+const TITLES = new Set([
+  'mr', 'mrs', 'ms', 'miss', 'mstr', 'master', 'dr', 'prof', 'engr', 'barr', 'arc',
+  'pastor', 'pst', 'rev', 'reverend', 'evang', 'evangelist', 'bro', 'brother', 'sis',
+  'sister', 'elder', 'deacon', 'deaconess', 'minister', 'apostle', 'prophet', 'bishop',
+  'chief', 'hon',
+])
+
+// Returns the name tokens with a leading title removed (unless it's the only token).
+function nameTokens(name: string): string[] {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length > 1 && TITLES.has(parts[0].toLowerCase().replace(/\./g, ''))) {
+    return parts.slice(1)
+  }
+  return parts
+}
+
 export function initialsOf(name: string): string {
-  return name
-    .split(' ')
+  const parts = nameTokens(name)
+  const initials = parts
     .map((s) => s[0])
     .filter(Boolean)
     .slice(0, 2)
     .join('')
     .toUpperCase()
+  return initials || name.slice(0, 2).toUpperCase()
 }
 
+/** The person's first real name (skips a leading title). */
 export function firstNameOf(name: string): string {
-  return name.split(' ')[0]
+  return nameTokens(name)[0] ?? name
+}
+
+/** Full name with any leading title removed — for compact displays. */
+export function displayName(name: string): string {
+  const parts = nameTokens(name)
+  return parts.length ? parts.join(' ') : name
 }

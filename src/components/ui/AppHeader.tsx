@@ -1,10 +1,9 @@
 import Image from 'next/image'
-import { BellIcon, DotsIcon } from './Icons'
+import HeaderActions from './HeaderActions'
 
 interface Props {
   role: string
   name: string
-  hasNotif?: boolean
 }
 
 const roleLabel: Record<string, string> = {
@@ -14,7 +13,7 @@ const roleLabel: Record<string, string> = {
   church_office: 'Church Admin',
 }
 
-export default function AppHeader({ role, name, hasNotif }: Props) {
+export default function AppHeader({ role, name }: Props) {
   return (
     <header className="flex items-center gap-3 px-5 pt-4 pb-3 bg-bg z-10 relative">
       <div
@@ -33,25 +32,7 @@ export default function AppHeader({ role, name, hasNotif }: Props) {
           {name}
         </div>
       </div>
-      <div className="flex gap-0.5">
-        <button
-          className="w-9 h-9 rounded-[11px] flex items-center justify-center text-ink-2
-                     hover:bg-bg-2 transition-colors relative"
-          aria-label="Notifications"
-        >
-          <BellIcon className="w-[18px] h-[18px]" />
-          {hasNotif && (
-            <span className="absolute top-[7px] right-[9px] w-[7px] h-[7px] rounded-full bg-urgent border-2 border-bg" />
-          )}
-        </button>
-        <button
-          className="w-9 h-9 rounded-[11px] flex items-center justify-center text-ink-2
-                     hover:bg-bg-2 transition-colors"
-          aria-label="More options"
-        >
-          <DotsIcon className="w-[18px] h-[18px]" />
-        </button>
-      </div>
+      <HeaderActions />
     </header>
   )
 }

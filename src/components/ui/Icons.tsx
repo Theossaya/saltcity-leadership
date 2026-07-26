@@ -148,6 +148,15 @@ export function MegaphoneIcon({ className }: IconProps) {
   )
 }
 
+export function ArrowLeftIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" {...stroke} strokeWidth={1.8} className={className} aria-hidden>
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  )
+}
+
 export function ChartIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" {...stroke} className={className} aria-hidden>
