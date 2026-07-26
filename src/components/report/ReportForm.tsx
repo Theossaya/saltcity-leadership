@@ -52,6 +52,7 @@ export default function ReportForm({
   const [reportId, setReportId] = useState(initialReportId)
   const [savedAt, setSavedAt] = useState<Date | null>(initialReportId ? new Date() : null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [attempted, setAttempted] = useState(false) // reveal missing-reason highlights after a submit try
   const [saving, startSaving] = useTransition()
   const [submitting, startSubmitting] = useTransition()
 
@@ -128,6 +129,16 @@ export default function ReportForm({
   }
 
   function onSubmit() {
+    // Every absent member needs a reason before the report can be submitted.
+    const missing = absentees.filter((m) => !(reasons[m.id] ?? '').trim())
+    if (missing.length > 0) {
+      setAttempted(true)
+      setFeedback({
+        type: 'error',
+        message: `Add a reason for ${missing.length} absent member${missing.length > 1 ? 's' : ''} before submitting.`,
+      })
+      return
+    }
     if (timer.current) clearTimeout(timer.current)
     startSubmitting(async () => {
       const id = await doSave()
@@ -181,27 +192,32 @@ export default function ReportForm({
 
       {absentees.length > 0 && (
         <>
-          <SectionLabel label="Absent — add a reason (optional)" />
+          <SectionLabel label="Absent — add a reason for each" />
           <ul className="mx-5 my-0 p-0 list-none [&>li+li]:border-t [&>li+li]:border-[var(--rule)]">
-            {absentees.map((m) => (
-              <li key={m.id} className="flex gap-[11px] items-center py-2.5">
-                <span className="w-7 h-7 rounded-full bg-bg-2 text-ink-2 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
-                  {initialsOf(m.full_name)}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[13.5px] font-medium text-ink truncate leading-tight mb-1">
-                    {m.full_name}
+            {absentees.map((m) => {
+              const empty = !(reasons[m.id] ?? '').trim()
+              const flag = attempted && empty
+              return (
+                <li key={m.id} className="flex gap-[11px] items-center py-2.5">
+                  <span className="w-7 h-7 rounded-full bg-bg-2 text-ink-2 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                    {initialsOf(m.full_name)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13.5px] font-medium text-ink truncate leading-tight mb-1">
+                      {m.full_name}
+                    </div>
+                    <input
+                      className={`${inputCls} !py-2 !text-[13px] ${flag ? '!border-urgent' : ''}`}
+                      placeholder={flag ? 'Reason required' : 'e.g. travelling, unwell, at work'}
+                      value={reasons[m.id] ?? ''}
+                      onChange={(e) => setReason(m.id, e.target.value)}
+                      disabled={busy}
+                      aria-invalid={flag}
+                    />
                   </div>
-                  <input
-                    className={`${inputCls} !py-2 !text-[13px]`}
-                    placeholder="e.g. travelling, unwell, no reason yet"
-                    value={reasons[m.id] ?? ''}
-                    onChange={(e) => setReason(m.id, e.target.value)}
-                    disabled={busy}
-                  />
-                </div>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
         </>
       )}
