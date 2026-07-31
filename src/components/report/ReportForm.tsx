@@ -20,10 +20,10 @@ interface Member {
 
 interface Props {
   companyId: string
-  weekStart: string
-  weekNumber: number
-  year: number
-  weekRange: string
+  serviceDate: string
+  serviceType: string
+  serviceLabel: string // "Sunday service"
+  serviceLongLabel: string // "Sunday service · 2 Aug"
   members: Member[]
   initialReportId?: string
   initialPresentIds: string[]
@@ -34,10 +34,10 @@ interface Props {
 
 export default function ReportForm({
   companyId,
-  weekStart,
-  weekNumber,
-  year,
-  weekRange,
+  serviceDate,
+  serviceType,
+  serviceLabel,
+  serviceLongLabel,
   members,
   initialReportId,
   initialPresentIds,
@@ -69,9 +69,8 @@ export default function ReportForm({
     const result = await saveDraft({
       reportId,
       companyId,
-      weekStart,
-      weekNumber,
-      year,
+      serviceDate,
+      serviceType,
       presentIds,
       reasons,
       notes,
@@ -83,7 +82,7 @@ export default function ReportForm({
     setReportId(result.reportId)
     setSavedAt(new Date())
     return result.reportId
-  }, [companyId, weekStart, weekNumber, year])
+  }, [companyId, serviceDate, serviceType])
 
   const scheduleAutosave = useCallback(() => {
     if (timer.current) clearTimeout(timer.current)
@@ -161,7 +160,7 @@ export default function ReportForm({
         <FeedbackBanner type={feedback.type} message={feedback.message} onDismiss={() => setFeedback(null)} />
       )}
 
-      <Greeting day={`Week ${weekNumber} · ${weekRange}`}>
+      <Greeting day={serviceLongLabel}>
         Who was <em>here?</em>
       </Greeting>
 

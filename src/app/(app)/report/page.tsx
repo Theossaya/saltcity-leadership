@@ -1,7 +1,13 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isAdminOrOffice, type Profile } from '@/lib/auth'
-import { getCurrentWeek, formatWeekRange, firstNameOf, initialsOf } from '@/lib/utils'
+import {
+  getCurrentService,
+  getRecentServices,
+  formatShortDate,
+  firstNameOf,
+  initialsOf,
+} from '@/lib/utils'
 import Greeting from '@/components/ui/Greeting'
 import Hero from '@/components/ui/Hero'
 import SectionLabel from '@/components/ui/SectionLabel'
@@ -12,22 +18,37 @@ import Button from '@/components/ui/Button'
 import { ChevronIcon } from '@/components/ui/Icons'
 import ReportForm from '@/components/report/ReportForm'
 
-export default async function ReportPage() {
+export default async function ReportPage({
+  searchParams,
+}: {
+  searchParams: { service?: string }
+}) {
   const { profile } = await requireAuth()
-  return isAdminOrOffice(profile.role) ? <AdminQueue /> : <LeaderReport profile={profile} />
+  return isAdminOrOffice(profile.role) ? (
+    <AdminQueue serviceParam={searchParams.service} />
+  ) : (
+    <LeaderReport profile={profile} serviceParam={searchParams.service} />
+  )
 }
 
-// ===== Leader: draft form or submitted summary =====
+// ===== Leader: draft form or submitted summary, per service =====
 
-async function LeaderReport({ profile }: { profile: Profile }) {
+async function LeaderReport({
+  profile,
+  serviceParam,
+}: {
+  profile: Profile
+  serviceParam?: string
+}) {
   const supabase = createClient()
-  const { weekStart, weekNumber, year } = getCurrentWeek()
-  const weekRange = formatWeekRange(weekStart)
+  // Default to the service that just happened; ?service=YYYY-MM-DD files an earlier one.
+  const recent = getRecentServices(4)
+  const service = recent.find((s) => s.date === serviceParam) ?? getCurrentService()
 
   if (!profile.company_id) {
     return (
       <>
-        <Greeting day={`Week ${weekNumber} · ${weekRange}`}>
+        <Greeting day={service.longLabel}>
           No <em>company.</em>
         </Greeting>
         <p className="mx-5 mt-3 text-[14px] text-ink-2 leading-[1.5]">
@@ -37,7 +58,7 @@ async function LeaderReport({ profile }: { profile: Profile }) {
     )
   }
 
-  const [{ data: members }, { data: report }] = await Promise.all([
+  const [{ data: members }, { data: report }, { data: recentReports }] = await Promise.all([
     supabase
       .from('members')
       .select('id, full_name')
@@ -48,9 +69,19 @@ async function LeaderReport({ profile }: { profile: Profile }) {
       .from('weekly_reports')
       .select('id, status, notes, flag_reason')
       .eq('company_id', profile.company_id)
-      .eq('week_start', weekStart)
+      .eq('service_date', service.date)
       .maybeSingle(),
+    supabase
+      .from('weekly_reports')
+      .select('service_date, status')
+      .eq('company_id', profile.company_id)
+      .in('service_date', recent.map((s) => s.date)),
   ])
+
+  const statusByDate = new Map((recentReports ?? []).map((r) => [r.service_date, r.status]))
+  const picker = (
+    <ServicePicker services={recent} current={service.date} statusByDate={statusByDate} />
+  )
 
   // Submitted / reviewed / sent-back — read-only summary
   if (report && report.status !== 'draft') {
@@ -66,7 +97,7 @@ async function LeaderReport({ profile }: { profile: Profile }) {
 
     return (
       <>
-        <Greeting day={`Week ${weekNumber} · ${weekRange}`}>
+        <Greeting day={service.longLabel}>
           {sentBack ? (
             <>
               Report <em>sent back.</em>
@@ -77,16 +108,18 @@ async function LeaderReport({ profile }: { profile: Profile }) {
             </>
           )}
         </Greeting>
+        {picker}
         <Hero
-          label="This week's report"
+          label={service.longLabel}
           title={
             sentBack ? (
               <>
-                Week {weekNumber} — <em>needs changes.</em>
+                {service.label} — <em>needs changes.</em>
               </>
             ) : (
               <>
-                Week {weekNumber} — <em>{report.status === 'reviewed' ? 'approved.' : 'submitted.'}</em>
+                {service.label} —{' '}
+                <em>{report.status === 'reviewed' ? 'approved.' : 'submitted.'}</em>
               </>
             )
           }
@@ -144,19 +177,55 @@ async function LeaderReport({ profile }: { profile: Profile }) {
   }
 
   return (
-    <ReportForm
-      companyId={profile.company_id}
-      weekStart={weekStart}
-      weekNumber={weekNumber}
-      year={year}
-      weekRange={weekRange}
-      members={members ?? []}
-      initialReportId={report?.id}
-      initialPresentIds={presentIds}
-      initialReasons={reasons}
-      initialNotes={report?.notes ?? ''}
-      sentBackReason={report?.flag_reason ?? null}
-    />
+    <>
+      {picker}
+      <ReportForm
+        companyId={profile.company_id}
+        serviceDate={service.date}
+        serviceType={service.type}
+        serviceLabel={service.label}
+        serviceLongLabel={service.longLabel}
+        members={members ?? []}
+        initialReportId={report?.id}
+        initialPresentIds={presentIds}
+        initialReasons={reasons}
+        initialNotes={report?.notes ?? ''}
+        sentBackReason={report?.flag_reason ?? null}
+      />
+    </>
+  )
+}
+
+// Small tab strip so a leader can file the service that just ended, or catch up
+// on one they missed. Green tick = already submitted.
+function ServicePicker({
+  services,
+  current,
+  statusByDate,
+}: {
+  services: { date: string; label: string }[]
+  current: string
+  statusByDate: Map<string, string>
+}) {
+  return (
+    <div className="px-5 pt-3 flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {services.map((s) => {
+        const done = statusByDate.get(s.date) && statusByDate.get(s.date) !== 'draft'
+        const active = s.date === current
+        return (
+          <Link
+            key={s.date}
+            href={`/report?service=${s.date}`}
+            className={`flex-shrink-0 px-3 py-2 rounded-[11px] text-[12.5px] font-medium whitespace-nowrap
+                        transition-colors active:scale-95
+                        ${active ? 'bg-primary text-primary-ink' : 'bg-surface text-ink-2 border border-[var(--rule)]'}`}
+          >
+            {done && <span className={active ? 'text-accent-soft' : 'text-ok'}>✓ </span>}
+            {s.label.replace(' service', '')} · {formatShortDate(s.date)}
+          </Link>
+        )
+      })}
+    </div>
   )
 }
 
@@ -169,17 +238,17 @@ const statusSub: Record<string, React.ReactNode> = {
   draft: <StatusDot>Still being filled in</StatusDot>,
 }
 
-async function AdminQueue() {
+async function AdminQueue({ serviceParam }: { serviceParam?: string }) {
   const supabase = createClient()
-  const { weekStart, weekNumber } = getCurrentWeek()
-  const weekRange = formatWeekRange(weekStart)
+  const recent = getRecentServices(4)
+  const service = recent.find((s) => s.date === serviceParam) ?? getCurrentService()
 
   const [{ data: companies }, { data: reports }] = await Promise.all([
     supabase.from('companies').select('id, name').order('name'),
     supabase
       .from('weekly_reports')
       .select('id, status, flag_reason, company_id, submitter:profiles!weekly_reports_submitted_by_fkey(full_name)')
-      .eq('week_start', weekStart),
+      .eq('service_date', service.date),
   ])
 
   const byCompany = new Map((reports ?? []).map((r) => [r.company_id, r]))
@@ -194,11 +263,17 @@ async function AdminQueue() {
 
   return (
     <>
-      <Greeting day={`Week ${weekNumber} · ${weekRange}`}>
-        This week&rsquo;s <em>reports.</em>
+      <Greeting day={service.longLabel}>
+        {service.label.replace(' service', '')} <em>reports.</em>
       </Greeting>
 
-      <div className="px-5 pt-2">
+      <ServicePicker
+        services={recent}
+        current={service.date}
+        statusByDate={new Map()}
+      />
+
+      <div className="px-5 pt-3">
         <Link
           href="/export"
           className="text-[13px] text-primary font-semibold active:opacity-60 transition-opacity"

@@ -1,7 +1,13 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
-import { formatWeekRange, initialsOf, firstNameOf } from '@/lib/utils'
+import {
+  formatShortDate,
+  initialsOf,
+  firstNameOf,
+  SERVICE_LABEL,
+  type ServiceType,
+} from '@/lib/utils'
 import Greeting from '@/components/ui/Greeting'
 import Hero from '@/components/ui/Hero'
 import SectionLabel from '@/components/ui/SectionLabel'
@@ -16,7 +22,7 @@ export default async function ReportDetailPage({ params }: { params: { id: strin
   const { data: report } = await supabase
     .from('weekly_reports')
     .select(
-      'id, status, week_number, week_start, notes, flag_reason, company:companies(name), submitter:profiles!weekly_reports_submitted_by_fkey(full_name)'
+      'id, status, week_number, week_start, service_date, service_type, notes, flag_reason, company:companies(name), submitter:profiles!weekly_reports_submitted_by_fkey(full_name)'
     )
     .eq('id', params.id)
     .maybeSingle()
@@ -43,9 +49,11 @@ export default async function ReportDetailPage({ params }: { params: { id: strin
             : 'in progress.'
           : 'awaiting review.'
 
+  const serviceLabel = `${SERVICE_LABEL[report.service_type as ServiceType] ?? 'Service'} · ${formatShortDate(report.service_date)}`
+
   return (
     <>
-      <Greeting day={`Week ${report.week_number} · ${formatWeekRange(report.week_start)}`}>
+      <Greeting day={serviceLabel}>
         {report.company?.name ?? 'Report'}<em>.</em>
       </Greeting>
 
@@ -53,7 +61,8 @@ export default async function ReportDetailPage({ params }: { params: { id: strin
         label={`Submitted by ${firstNameOf(report.submitter?.full_name ?? 'leader')}`}
         title={
           <>
-            Week {report.week_number} — <em>{statusWord}</em>
+            {SERVICE_LABEL[report.service_type as ServiceType] ?? 'Service'} —{' '}
+            <em>{statusWord}</em>
           </>
         }
         meta={

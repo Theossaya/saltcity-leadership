@@ -1,20 +1,23 @@
 'use server'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth'
+import { weekOfDate } from '@/lib/utils'
 import { revalidatePath } from 'next/cache'
 
 export async function saveDraft(data: {
   reportId?: string
   companyId: string
-  weekStart: string
-  weekNumber: number
-  year: number
+  serviceDate: string
+  serviceType: string
   presentIds: string[]
   reasons: Record<string, string> // memberId -> absence reason (absentees only)
   notes: string
 }): Promise<{ error: string } | { reportId: string }> {
   const supabase = createClient()
   const { userId } = await requireAuth()
+
+  // Weekly fields are kept in sync so weekly roll-ups (trends, exports) still work.
+  const { weekStart, weekNumber, year } = weekOfDate(data.serviceDate)
 
   const { data: report, error } = await supabase
     .from('weekly_reports')
@@ -23,13 +26,15 @@ export async function saveDraft(data: {
         id: data.reportId,
         company_id: data.companyId,
         submitted_by: userId,
-        week_start: data.weekStart,
-        week_number: data.weekNumber,
-        year: data.year,
+        service_date: data.serviceDate,
+        service_type: data.serviceType,
+        week_start: weekStart,
+        week_number: weekNumber,
+        year: year,
         status: 'draft',
         notes: data.notes,
       },
-      { onConflict: 'company_id,week_start' }
+      { onConflict: 'company_id,service_date' }
     )
     .select('id')
     .single()

@@ -2,20 +2,24 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isAdminOrOffice } from '@/lib/auth'
-import { getCurrentWeek, formatWeekRange, formatDayLong } from '@/lib/utils'
+import { getCurrentService, getRecentServices, formatDayLong } from '@/lib/utils'
 import { getWeekSummary, statusText } from '@/lib/reports'
 import PrintButton from '@/components/admin/PrintButton'
 
-export const metadata = { title: 'Week report — SaltCity Leadership' }
+export const metadata = { title: 'Service report — SaltCity Leadership' }
 
-export default async function ExportPage() {
+export default async function ExportPage({
+  searchParams,
+}: {
+  searchParams: { service?: string }
+}) {
   const { profile } = await requireAuth()
   if (!isAdminOrOffice(profile.role)) redirect('/')
 
   const supabase = createClient()
-  const { weekStart, weekNumber, year } = getCurrentWeek()
-  const weekRange = formatWeekRange(weekStart)
-  const summary = await getWeekSummary(supabase, weekStart)
+  const recent = getRecentServices(6)
+  const service = recent.find((s) => s.date === searchParams.service) ?? getCurrentService()
+  const summary = await getWeekSummary(supabase, service.date)
   const t = summary.totals
 
   return (
@@ -27,7 +31,7 @@ export default async function ExportPage() {
         </Link>
         <div className="flex items-center gap-2">
           <a
-            href="/export/csv"
+            href={`/export/csv?service=${service.date}`}
             className="inline-flex items-center justify-center px-4 py-2 rounded-[10px] bg-transparent
                        text-ink text-[13px] font-medium shadow-[inset_0_0_0_1px_var(--rule-strong)]"
           >
@@ -37,13 +41,27 @@ export default async function ExportPage() {
         </div>
       </div>
 
+      {/* Pick which service to export */}
+      <div className="no-print flex gap-2 mb-6 flex-wrap">
+        {recent.map((s) => (
+          <Link
+            key={s.date}
+            href={`/export?service=${s.date}`}
+            className={`px-3 py-1.5 rounded-[9px] text-[12.5px] font-medium
+                        ${s.date === service.date ? 'bg-primary text-primary-ink' : 'bg-bg-2 text-ink-2'}`}
+          >
+            {s.longLabel}
+          </Link>
+        ))}
+      </div>
+
       {/* Document */}
       <header className="border-b border-[var(--rule-strong)] pb-4 mb-5">
         <h1 className="text-[24px] font-semibold tracking-[-0.02em] m-0">
-          SaltCity Leadership — Weekly Company Report
+          SaltCity Leadership — Company Attendance Report
         </h1>
         <p className="text-[13.5px] text-ink-2 mt-1">
-          Week {weekNumber}, {year} · {weekRange} · generated {formatDayLong()}
+          {service.longLabel} ({service.timeLabel}) · generated {formatDayLong()}
         </p>
         <p className="text-[13.5px] text-ink-2 mt-2">
           <b>{t.submitted} of {t.companies}</b> companies submitted · {t.present} present ·{' '}

@@ -435,6 +435,8 @@ export type Database = {
           week_start: string
           week_number: number
           year: number
+          service_date: string
+          service_type: string
           status: Database['public']['Enums']['report_status']
           notes: string | null
           reviewed_by: string | null
@@ -450,6 +452,8 @@ export type Database = {
           week_start: string
           week_number: number
           year: number
+          service_date: string
+          service_type: string
           status?: Database['public']['Enums']['report_status']
           notes?: string | null
           reviewed_by?: string | null
@@ -465,6 +469,8 @@ export type Database = {
           week_start?: string
           week_number?: number
           year?: number
+          service_date?: string
+          service_type?: string
           status?: Database['public']['Enums']['report_status']
           notes?: string | null
           reviewed_by?: string | null

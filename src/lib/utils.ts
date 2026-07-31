@@ -1,3 +1,86 @@
+// ===== Service schedule =====
+// SaltCity runs three services a week. Leaders file one report per service,
+// normally right after it ends.
+export type ServiceType = 'sunday' | 'wednesday' | 'friday'
+
+export interface ServiceOccurrence {
+  date: string // YYYY-MM-DD
+  type: ServiceType
+  label: string // "Sunday service"
+  timeLabel: string // "9:00am"
+  longLabel: string // "Sunday service · 2 Aug"
+}
+
+const SERVICE_SCHEDULE: { day: number; type: ServiceType; startHour: number; timeLabel: string }[] = [
+  { day: 0, type: 'sunday', startHour: 9, timeLabel: '9:00am' },
+  { day: 3, type: 'wednesday', startHour: 17, timeLabel: '5:00pm' },
+  { day: 5, type: 'friday', startHour: 17, timeLabel: '5:00pm' },
+]
+
+export const SERVICE_LABEL: Record<ServiceType, string> = {
+  sunday: 'Sunday service',
+  wednesday: 'Wednesday service',
+  friday: 'Friday service',
+}
+
+function occurrenceFor(date: Date, cfg: (typeof SERVICE_SCHEDULE)[number]): ServiceOccurrence {
+  const d = toDateString(date)
+  return {
+    date: d,
+    type: cfg.type,
+    label: SERVICE_LABEL[cfg.type],
+    timeLabel: cfg.timeLabel,
+    longLabel: `${SERVICE_LABEL[cfg.type]} · ${formatShortDate(d)}`,
+  }
+}
+
+/**
+ * The most recent service that has already started, walking backwards from `now`.
+ * A service becomes reportable once it has begun, so a leader can file it the
+ * moment the meeting ends.
+ */
+export function getCurrentService(now: Date = new Date()): ServiceOccurrence {
+  for (let back = 0; back < 8; back++) {
+    const day = new Date(now)
+    day.setDate(day.getDate() - back)
+    const cfg = SERVICE_SCHEDULE.find((s) => s.day === day.getDay())
+    if (!cfg) continue
+    // Today's service only counts once it has started.
+    if (back === 0 && now.getHours() < cfg.startHour) continue
+    return occurrenceFor(day, cfg)
+  }
+  // Fallback (unreachable with a weekly schedule)
+  return occurrenceFor(now, SERVICE_SCHEDULE[0])
+}
+
+/** The most recent `count` services, newest first — lets a leader file a missed one. */
+export function getRecentServices(count = 4, now: Date = new Date()): ServiceOccurrence[] {
+  const out: ServiceOccurrence[] = []
+  for (let back = 0; back < 40 && out.length < count; back++) {
+    const day = new Date(now)
+    day.setDate(day.getDate() - back)
+    const cfg = SERVICE_SCHEDULE.find((s) => s.day === day.getDay())
+    if (!cfg) continue
+    if (back === 0 && now.getHours() < cfg.startHour) continue
+    out.push(occurrenceFor(day, cfg))
+  }
+  return out
+}
+
+/** Week (Mon-start) containing a given service date — used for weekly roll-ups. */
+export function weekOfDate(dateStr: string) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  const day = dt.getDay()
+  const monday = new Date(dt)
+  monday.setDate(dt.getDate() - (day === 0 ? 6 : day - 1))
+  return {
+    weekStart: toDateString(monday),
+    weekNumber: getISOWeek(monday),
+    year: monday.getFullYear(),
+  }
+}
+
 export function getCurrentWeek() {
   const now = new Date()
   const day = now.getDay()

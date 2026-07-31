@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAuth, isAdminOrOffice, type Profile } from '@/lib/auth'
 import {
   getCurrentWeek,
+  getCurrentService,
   formatDayLong,
   formatEventDate,
   formatTime,
@@ -35,7 +36,8 @@ export default async function DashboardPage() {
 
 async function LeaderDashboard({ profile }: { profile: Profile }) {
   const supabase = createClient()
-  const { weekStart, weekNumber } = getCurrentWeek()
+  const { weekStart } = getCurrentWeek()
+  const service = getCurrentService()
 
   const [{ data: report }, { data: followups }, { data: nextEvent }] = await Promise.all([
     profile.company_id
@@ -43,7 +45,7 @@ async function LeaderDashboard({ profile }: { profile: Profile }) {
           .from('weekly_reports')
           .select('id, status, updated_at')
           .eq('company_id', profile.company_id)
-          .eq('week_start', weekStart)
+          .eq('service_date', service.date)
           .maybeSingle()
       : Promise.resolve({ data: null }),
 
@@ -66,22 +68,24 @@ async function LeaderDashboard({ profile }: { profile: Profile }) {
   ])
 
   const status = report?.status
+  // A report sent back becomes a draft carrying flag_reason (see flagReport).
+  const sentBack = status === 'flagged'
   const heroTitle =
     status === 'submitted' || status === 'reviewed' ? (
       <>
-        Week {weekNumber} — <em>submitted.</em>
+        {service.label} — <em>submitted.</em>
       </>
-    ) : status === 'flagged' ? (
+    ) : sentBack ? (
       <>
-        Week {weekNumber} — <em>flagged.</em>
+        {service.label} — <em>sent back.</em>
       </>
     ) : status === 'draft' ? (
       <>
-        Week {weekNumber} — <em>in progress.</em>
+        {service.label} — <em>in progress.</em>
       </>
     ) : (
       <>
-        Week {weekNumber} — <em>not started.</em>
+        {service.label} — <em>not started.</em>
       </>
     )
   const heroMeta =
@@ -89,19 +93,19 @@ async function LeaderDashboard({ profile }: { profile: Profile }) {
       <>
         <b>Thank you.</b> The office will review it.
       </>
-    ) : status === 'flagged' ? (
+    ) : sentBack ? (
       <>
-        <b>The office flagged this report</b> — open it to see why.
+        <b>The office asked for a change</b> — open it to see why.
       </>
     ) : (
       <>
-        <b>Closes Sunday 18:00</b> · takes 2 minutes
+        <b>{service.timeLabel} service</b> · takes about a minute
       </>
     )
   const heroAction =
     status === 'submitted' || status === 'reviewed'
       ? 'View report'
-      : status === 'flagged'
+      : sentBack
         ? 'Open report'
         : status === 'draft'
           ? 'Continue report'
@@ -114,7 +118,7 @@ async function LeaderDashboard({ profile }: { profile: Profile }) {
       </Greeting>
 
       <Hero
-        label="This week's report"
+        label={service.longLabel}
         title={heroTitle}
         meta={heroMeta}
         actions={
@@ -180,24 +184,26 @@ async function LeaderDashboard({ profile }: { profile: Profile }) {
 
 async function AdminDashboard({ profile }: { profile: Profile }) {
   const supabase = createClient()
-  const { weekStart, weekNumber } = getCurrentWeek()
+  const service = getCurrentService()
 
   const [
     { count: companyCount },
-    { data: weekReports },
-    { data: flagged },
+    { data: serviceReports },
+    { data: sentBack },
     { data: urgentCase },
     { data: latestNotice },
   ] = await Promise.all([
     supabase.from('companies').select('id', { count: 'exact', head: true }),
 
-    supabase.from('weekly_reports').select('status').eq('week_start', weekStart),
+    supabase.from('weekly_reports').select('status').eq('service_date', service.date),
 
+    // Sent-back reports become drafts carrying flag_reason (see flagReport).
     supabase
       .from('weekly_reports')
       .select('id, status, company:companies(name), submitter:profiles!weekly_reports_submitted_by_fkey(full_name)')
-      .eq('week_start', weekStart)
-      .eq('status', 'flagged')
+      .eq('service_date', service.date)
+      .not('flag_reason', 'is', null)
+      .neq('status', 'reviewed')
       .limit(3),
 
     supabase
@@ -220,8 +226,9 @@ async function AdminDashboard({ profile }: { profile: Profile }) {
   ])
 
   const total = companyCount ?? 0
-  const submitted = (weekReports ?? []).filter((r) => r.status !== 'draft').length
+  const submitted = (serviceReports ?? []).filter((r) => r.status !== 'draft').length
   const outstanding = Math.max(0, total - submitted)
+  const flagged = sentBack
 
   return (
     <>
@@ -230,7 +237,7 @@ async function AdminDashboard({ profile }: { profile: Profile }) {
       </Greeting>
 
       <Hero
-        label={`Week ${weekNumber} reports`}
+        label={`${service.longLabel} · reports`}
         title={
           <>
             {submitted} of {total} <em>are in.</em>

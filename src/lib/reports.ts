@@ -28,11 +28,12 @@ export interface WeekSummary {
   allIn: boolean
 }
 
-// Per-company roll-up for a given week. Used by both the print view and the CSV
-// route so they never drift. Runs with the caller's session (admin → full access).
+// Per-company roll-up for a single SERVICE (identified by its date). Used by both
+// the print view and the CSV route so they never drift. Runs with the caller's
+// session (admin → full access).
 export async function getWeekSummary(
   supabase: SupabaseClient<Database>,
-  weekStart: string
+  serviceDate: string
 ): Promise<WeekSummary> {
   const [{ data: companies }, { data: leaders }, { data: reports }] = await Promise.all([
     supabase.from('companies').select('id, name').order('name'),
@@ -42,7 +43,7 @@ export async function getWeekSummary(
       .select(
         'id, company_id, status, notes, submitter:profiles!weekly_reports_submitted_by_fkey(full_name)'
       )
-      .eq('week_start', weekStart),
+      .eq('service_date', serviceDate),
   ])
 
   const reportByCompany = new Map((reports ?? []).map((r) => [r.company_id, r]))
@@ -128,9 +129,9 @@ function csvCell(value: string | number): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-export function weekSummaryToCsv(summary: WeekSummary, weekNumber: number, weekRange: string): string {
+export function weekSummaryToCsv(summary: WeekSummary, serviceLabel: string): string {
   const lines: string[] = []
-  lines.push(csvCell(`SaltCity Leadership — Week ${weekNumber} (${weekRange})`))
+  lines.push(csvCell(`SaltCity Leadership — ${serviceLabel}`))
   lines.push(
     [
       'Company',
