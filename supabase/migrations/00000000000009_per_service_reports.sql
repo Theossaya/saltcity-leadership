@@ -39,10 +39,11 @@ begin
      where rel.relname = 'weekly_reports'
        and con.contype = 'u'
        and (
-         select array_agg(att.attname order by att.attname)
-           from unnest(con.conkey) k
+         -- attname is type `name`; cast to text so the array comparison works
+         select array_agg(att.attname::text order by att.attname::text)
+           from unnest(con.conkey) as k(attnum)
            join pg_attribute att
-             on att.attrelid = con.conrelid and att.attnum = k
+             on att.attrelid = con.conrelid and att.attnum = k.attnum
        ) = array['company_id', 'week_start']
   loop
     execute format('alter table weekly_reports drop constraint %I', c.conname);
