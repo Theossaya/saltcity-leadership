@@ -28,8 +28,13 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
 
   if (!company) notFound()
 
-  const [{ data: members }, { data: leadership }, { data: openCases }, { data: lastReport }] =
-    await Promise.all([
+  const [
+    { data: members },
+    { data: leadership },
+    { data: openCases },
+    { data: lastReport },
+    { data: removedMembers },
+  ] = await Promise.all([
       supabase
         .from('members')
         .select('id, full_name, phone')
@@ -56,6 +61,12 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
         .order('week_start', { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from('members')
+        .select('id, full_name')
+        .eq('company_id', company.id)
+        .eq('status', 'inactive')
+        .order('full_name'),
     ])
 
   const memberList = members ?? []
@@ -124,7 +135,7 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
       {admin || isOwnCompany ? (
         <MemberAdmin
           companyId={company.id}
-          canRemove={admin}
+          removed={removedMembers ?? []}
           members={memberList.map((m) => ({
             ...m,
             ring: caseByMember.get(m.id) ?? null,
